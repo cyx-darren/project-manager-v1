@@ -24,12 +24,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Helper function to test connection
 export const testSupabaseConnection = async () => {
   try {
-    const { data, error } = await supabase.from('_test').select('*').limit(1)
+    const { error } = await supabase.from('_test').select('*').limit(1)
     if (error && error.code !== 'PGRST116') { // PGRST116 = table doesn't exist, which is expected
       throw error
     }
     return { success: true, message: 'Supabase connection successful' }
   } catch (error) {
-    return { success: false, message: `Supabase connection failed: ${error.message}` }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return { success: false, message: `Supabase connection failed: ${errorMessage}` }
   }
 } 

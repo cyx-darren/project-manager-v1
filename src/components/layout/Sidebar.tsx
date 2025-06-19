@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { 
   HomeIcon, 
   FolderIcon, 
@@ -19,7 +19,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(true);
-  const location = useLocation();
+  // const location = useLocation(); // Future enhancement for active state
 
   const navigationItems = [
     { name: 'Dashboard', icon: HomeIcon, href: '/dashboard' },

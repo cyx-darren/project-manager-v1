@@ -5,6 +5,7 @@ import {
   ChevronDownIcon,
   Bars3Icon
 } from '@heroicons/react/24/outline';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -12,6 +13,21 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setIsUserMenuOpen(false);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = (email: string) => {
+    return email.charAt(0).toUpperCase();
+  };
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
@@ -62,11 +78,15 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 className="flex items-center space-x-3 p-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-white">JD</span>
+                  <span className="text-sm font-medium text-white">
+                    {user ? getUserInitials(user.email || '') : 'U'}
+                  </span>
                 </div>
                 <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium text-gray-900">John Doe</p>
-                  <p className="text-xs text-gray-500">Admin</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {user?.email || 'User'}
+                  </p>
+                  <p className="text-xs text-gray-500">Member</p>
                 </div>
                 <ChevronDownIcon className="hidden md:block h-4 w-4 text-gray-400" />
               </button>
@@ -93,13 +113,37 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     >
                       Team Settings
                     </a>
-                    <div className="border-t border-gray-100"></div>
                     <a
-                      href="#"
+                      href="/auth-demo"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
-                      Sign out
+                      Auth Demo
                     </a>
+                    <a
+                      href="/token-security"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Token Security Demo
+                    </a>
+                    <a
+                      href="/admin"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Admin Dashboard
+                    </a>
+                    <a
+                      href="/reports"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Reports (Permission Demo)
+                    </a>
+                    <div className="border-t border-gray-100"></div>
+                    <button
+                      onClick={handleSignOut}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Sign out
+                    </button>
                   </div>
                 </div>
               )}
