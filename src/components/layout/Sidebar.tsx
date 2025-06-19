@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { 
   HomeIcon, 
   FolderIcon, 
@@ -18,18 +19,19 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(true);
+  const location = useLocation();
 
   const navigationItems = [
-    { name: 'Dashboard', icon: HomeIcon, href: '#', current: true },
-    { name: 'My Tasks', icon: FolderIcon, href: '#', current: false },
-    { name: 'Calendar', icon: CalendarIcon, href: '#', current: false },
-    { name: 'Reports', icon: ChartBarIcon, href: '#', current: false },
+    { name: 'Dashboard', icon: HomeIcon, href: '/dashboard' },
+    { name: 'My Tasks', icon: FolderIcon, href: '/tasks' },
+    { name: 'Calendar', icon: CalendarIcon, href: '/calendar' },
+    { name: 'Reports', icon: ChartBarIcon, href: '/reports' },
   ];
 
   const projects = [
-    { name: 'Website Redesign', color: 'bg-blue-500', tasks: 12 },
-    { name: 'Mobile App', color: 'bg-green-500', tasks: 8 },
-    { name: 'Marketing Campaign', color: 'bg-purple-500', tasks: 15 },
+    { name: 'Website Redesign', color: 'bg-blue-500', tasks: 12, id: 'website-redesign' },
+    { name: 'Mobile App', color: 'bg-green-500', tasks: 8, id: 'mobile-app' },
+    { name: 'Marketing Campaign', color: 'bg-purple-500', tasks: 15, id: 'marketing-campaign' },
   ];
 
   return (
@@ -44,10 +46,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200 shadow-sm
+        fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-200
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:translate-x-0 md:static md:inset-auto
+        md:translate-x-0 md:static md:inset-auto md:border-r md:border-gray-200
       `}>
         {/* Sidebar header - Account for main header height */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 bg-white">
@@ -75,25 +77,30 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {/* Navigation */}
           <nav className="px-3 space-y-1">
             {navigationItems.map((item) => (
-              <a
+              <NavLink
                 key={item.name}
-                href={item.href}
-                className={`
+                to={item.href}
+                onClick={() => onClose()} // Close mobile sidebar when navigating
+                className={({ isActive }) => `
                   group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors
-                  ${item.current
+                  ${isActive
                     ? 'bg-primary-50 text-primary-700 border-r-2 border-primary-500'
                     : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                   }
                 `}
               >
-                <item.icon
-                  className={`
-                    mr-3 h-5 w-5 flex-shrink-0
-                    ${item.current ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500'}
-                  `}
-                />
-                {item.name}
-              </a>
+                {({ isActive }) => (
+                  <>
+                    <item.icon
+                      className={`
+                        mr-3 h-5 w-5 flex-shrink-0
+                        ${isActive ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500'}
+                      `}
+                    />
+                    {item.name}
+                  </>
+                )}
+              </NavLink>
             ))}
           </nav>
 
@@ -119,10 +126,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             {isProjectsExpanded && (
               <div className="mt-3 space-y-1">
                 {projects.map((project) => (
-                  <a
-                    key={project.name}
-                    href="#"
-                    className="group flex items-center justify-between px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-50 hover:text-gray-900"
+                  <NavLink
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    onClick={() => onClose()} // Close mobile sidebar when navigating
+                    className={({ isActive }) => `
+                      group flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors
+                      ${isActive 
+                        ? 'bg-primary-50 text-primary-700' 
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      }
+                    `}
                   >
                     <div className="flex items-center">
                       <div className={`w-3 h-3 rounded-full mr-3 ${project.color}`} />
@@ -131,7 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                       {project.tasks}
                     </span>
-                  </a>
+                  </NavLink>
                 ))}
               </div>
             )}
