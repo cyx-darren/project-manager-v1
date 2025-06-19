@@ -1,0 +1,185 @@
+
+<context>
+# Overview  
+This project is a lightweight, internal team task management tool inspired by Asana. It is designed to help teams manage tasks collaboratively with an intuitive interface that includes login/signup, project selection, a kanban board, and a calendar view.  
+
+The problem it solves:  
+- Small to mid-sized teams often need a simple, affordable project management solution without the complexity or cost of tools like Asana or Jira.  
+- Existing tools may be overkill or lack customization for internal workflows.
+
+Who it’s for:  
+- Founders, small startup teams, internal operations teams, or cross-functional squads looking for a minimal but functional task manager.
+
+Why it’s valuable:  
+- Fast to build and easy to use  
+- Cost-effective (built on Supabase’s generous free tier)  
+- Fully customizable and self-hosted  
+- Encourages collaboration and accountability through shared task boards and calendars
+
+# Core Features  
+
+### 1. User Authentication
+- What it does: Allows users to sign up, log in, and securely access their projects.
+- Why it's important: Enables secure access control and user-specific data segregation.
+- How it works: Supabase Auth handles email/password-based login. JWT tokens secure each session.
+
+### 2. Sidebar Navigation
+- What it does: Displays user’s projects and navigation controls.
+- Why it's important: Provides an intuitive way to access and switch between projects.
+- How it works: A left-hand sidebar component lists projects retrieved from the Supabase DB based on the authenticated user.
+
+### 3. Project Management
+- What it does: Users can create and manage multiple projects.
+- Why it's important: Allows task segmentation by context or team.
+- How it works: Projects are stored in a `projects` table linked to the user’s ID. Collaborators can be added via a `project_members` table.
+
+### 4. Board View (Kanban)
+- What it does: Shows tasks in columns like “To Do”, “In Progress”, and “Done”.
+- Why it's important: Allows for visual task tracking and drag-and-drop workflows.
+- How it works: Uses `react-beautiful-dnd` to enable drag-and-drop functionality. Tasks are filtered by status.
+
+### 5. Calendar View
+- What it does: Displays tasks with due dates in a calendar layout.
+- Why it's important: Helps teams plan workloads and deadlines visually.
+- How it works: Tasks with due dates are displayed using `react-big-calendar`.
+
+### 6. Task CRUD
+- What it does: Users can create, edit, and delete tasks.
+- Why it's important: Core to managing any kind of project.
+- How it works: Supabase handles inserts/updates/deletes to the `tasks` table via frontend forms.
+
+### 7. Multi-User Collaboration
+- What it does: Allows multiple users to access and manage shared projects.
+- Why it's important: Enables teamwork and shared responsibility.
+- How it works: The `project_members` table defines user-project relationships.
+
+# User Experience  
+
+### User Personas
+1. Startup Founder – needs to manage a lean remote team and keep track of task assignments.
+2. Product Manager – wants to plan and assign weekly sprints visually.
+3. Team Member – executes tasks and updates progress in board/calendar views.
+
+### Key User Flows
+- Login → Sidebar → Select Project → View Board/Calendar → Add/Edit Task
+- Create New Project → Invite Collaborators → Assign Tasks
+- Click Calendar Task → View Details → Edit or Change Due Date
+
+### UI/UX Considerations
+- Clean, responsive interface using Tailwind CSS
+- Minimalist navigation with persistent left-hand sidebar
+- Toggle between Board and Calendar views
+- Task modals for editing with keyboard support
+</context>
+
+<PRD>
+# Technical Architecture  
+
+### System Components
+- Frontend: React (with Vite or CRA), TailwindCSS
+- Auth & Backend: Supabase (Auth + PostgreSQL)
+- Drag and Drop: `react-beautiful-dnd`
+- Calendar View: `react-big-calendar`
+- Hosting: Vercel (frontend), Supabase (backend)
+
+### Data Models
+
+#### `users` (managed by Supabase)
+- id
+- email
+
+#### `projects`
+- id
+- title
+- description
+- owner_id
+- created_at
+
+#### `project_members`
+- id
+- project_id
+- user_id
+
+#### `tasks`
+- id
+- project_id
+- title
+- description
+- status
+- due_date
+- assignee_id
+- created_by
+- created_at
+- updated_at
+
+### APIs and Integrations
+- Supabase REST/GraphQL or client SDK
+- Optional: Email notifications via Supabase Edge Functions or 3rd-party tools
+
+### Infrastructure Requirements
+- Supabase Project (1 DB + Auth)
+- Vercel/Netlify deployment for frontend
+- Optional: GitHub repo with CI/CD (auto deploy on push)
+
+# Development Roadmap  
+
+### Phase 1: MVP  
+✅ Auth (signup/login/logout)  
+✅ Sidebar with project list and selector  
+✅ Project creation  
+✅ Board view with columns (todo/in-progress/done)  
+✅ Task creation, editing, and deletion  
+✅ Basic calendar view (read-only)  
+✅ Multi-user access to shared projects
+
+### Phase 2: Enhancements  
+- Task comments and attachments  
+- Real-time updates (Supabase subscriptions)  
+- Notification system (email or toast in-app)  
+- Project-level permissions (admin/member)  
+- Customizable columns in Board view  
+- Due date reminders or recurring tasks  
+- Project activity log (audit trail)
+
+# Logical Dependency Chain
+
+### Foundation First
+1. Supabase project setup: Auth, DB schema  
+2. React frontend boilerplate: Tailwind, routing, basic layout  
+3. Auth pages: Login/Signup → Enables scoped access to user content  
+4. Sidebar + Project listing/creation: Enables access to data and navigation  
+5. Board View CRUD: Core task functionality  
+6. Calendar View: Visualize tasks by time (once tasks exist)
+
+### Progression to Visible MVP
+- Prioritize visual, functional front-end early (Board View + Task CRUD)
+- Backend schema and Auth should support those views without needing complex setup
+- Once MVP is usable, build in collaboration and real-time features
+
+# Risks and Mitigations  
+
+### Technical Challenges
+- Drag-and-drop edge cases: Use battle-tested libraries (`react-beautiful-dnd`)
+- Real-time sync: Optional for MVP; can be added with Supabase Realtime
+
+### MVP Scoping
+- Overbuilding early: Stick strictly to minimal task/project functionality first
+- UI distraction: Start with functional layout, refine design post-MVP
+
+### Resource Constraints
+- Solo dev or small team: Focus only on features required by your actual workflow
+- Cost spikes on scale: Use Supabase free tier to validate; upgrade only if needed
+
+# Appendix  
+
+### Research Findings
+- Supabase free tier includes:
+  - 2M row reads/mo
+  - 500MB storage
+  - 50k monthly active users
+
+### Technical Specifications
+- Vercel or Netlify for static hosting (0 cost for most projects)
+- Supabase for auth and DB (~$0–25/mo unless scaling to thousands of users)
+- React + TailwindCSS as core UI framework
+</PRD>

@@ -1,0 +1,248 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Supabase Project and Database Schema",
+        "description": "Initialize Supabase project and create the database schema for users, projects, project_members, and tasks tables as specified in the PRD.",
+        "details": "1. Create a new Supabase project\n2. Configure authentication settings for email/password login\n3. Create the following tables with appropriate relationships:\n   - `projects` (id, title, description, owner_id, created_at)\n   - `project_members` (id, project_id, user_id)\n   - `tasks` (id, project_id, title, description, status, due_date, assignee_id, created_by, created_at, updated_at)\n4. Set up appropriate foreign key constraints\n5. Configure row-level security policies for data access control\n6. Create necessary indexes for performance optimization",
+        "testStrategy": "Verify table creation and relationships using Supabase dashboard. Test RLS policies by attempting to access data with different user credentials. Ensure foreign key constraints work properly by testing cascading operations.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Setup React Frontend with Tailwind CSS",
+        "description": "Initialize a React project using Vite or CRA, configure Tailwind CSS, and set up the basic application structure with routing.",
+        "details": "1. Initialize a new React project using Vite (recommended for performance)\n2. Install and configure Tailwind CSS\n3. Set up React Router for navigation\n4. Create basic layout components (App, Layout, etc.)\n5. Configure environment variables for Supabase connection\n6. Install required dependencies:\n   - `@supabase/supabase-js`\n   - `react-router-dom`\n   - `react-beautiful-dnd`\n   - `react-big-calendar`\n7. Create a responsive layout with a persistent sidebar",
+        "testStrategy": "Verify that the application builds and runs without errors. Test responsive design across different screen sizes. Ensure routing works correctly between different pages.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize React Project with Vite",
+            "description": "Set up a new React project using Vite as the build tool and install core dependencies.",
+            "dependencies": [],
+            "details": "Run `npm create vite@latest my-app --template react` to create a new React project with Vite. Navigate to the project directory and install core dependencies with `npm install react-router-dom @supabase/supabase-js react-beautiful-dnd react-big-calendar`. Initialize Git repository and create initial commit.",
+            "status": "done",
+            "testStrategy": "Verify the project structure is created correctly and all dependencies are installed by running `npm run dev` to ensure the development server starts without errors."
+          },
+          {
+            "id": 2,
+            "title": "Install and Configure Tailwind CSS",
+            "description": "Add Tailwind CSS to the project and configure it for use with React components.",
+            "dependencies": [
+              1
+            ],
+            "details": "Install Tailwind and its dependencies with `npm install -D tailwindcss postcss autoprefixer`. Initialize Tailwind with `npx tailwindcss init -p`. Configure content paths in tailwind.config.js to include all React components. Add Tailwind directives to the main CSS file. Create a basic theme configuration with custom colors and breakpoints if needed.\n<info added on 2025-06-19T00:54:32.587Z>\nSuccessfully configured Tailwind CSS with all required dependencies. Installed tailwindcss, postcss, and autoprefixer as dev dependencies. Created tailwind.config.js with proper content paths targeting all React components and implemented a custom blue-themed color palette. Set up postcss.config.js with the necessary plugins. Added Tailwind directives (@tailwind base, components, utilities) to src/index.css along with custom component styles including btn-primary, btn-secondary, card, and input-field components. Updated App.tsx with Tailwind classes to demonstrate functionality. Implemented responsive grid layout and verified that all custom components render correctly. The development server is running without errors, and the Tailwind setup is complete and ready for the next phase of development.\n</info added on 2025-06-19T00:54:32.587Z>",
+            "status": "done",
+            "testStrategy": "Create a simple component with Tailwind classes and verify the styles are applied correctly when viewed in the browser."
+          },
+          {
+            "id": 3,
+            "title": "Set Up Environment Configuration",
+            "description": "Configure environment variables for different environments and set up Supabase connection.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create .env.development and .env.production files. Add Supabase URL and API key variables. Create a src/config/supabase.js file that initializes the Supabase client using environment variables. Add .env files to .gitignore. Create a sample .env.example file for documentation. Set up environment variable validation to ensure required variables are present.",
+            "status": "pending",
+            "testStrategy": "Create a simple test that verifies the Supabase client is initialized correctly and can connect to the database."
+          },
+          {
+            "id": 4,
+            "title": "Implement Basic Layout Components",
+            "description": "Create reusable layout components that will be used throughout the application.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create a components/layout directory. Implement Layout.jsx as the main wrapper component with header, footer, and content areas. Create Sidebar.jsx for navigation menu. Implement Header.jsx for the top navigation bar. Add responsive design using Tailwind's responsive utilities. Ensure layouts work on mobile, tablet, and desktop viewports.\n<info added on 2025-06-19T01:32:46.618Z>\n✅ **Basic Layout Components Successfully Implemented!**\n\n**Components Created:**\n1. **Header.tsx** - Responsive header with search, user menu, and mobile hamburger menu\n2. **Sidebar.tsx** - Collapsible sidebar with navigation, projects list, and quick actions\n3. **Layout.tsx** - Main layout wrapper that coordinates header, sidebar, and content\n4. **Dashboard.tsx** - Sample dashboard page to demonstrate the layout\n\n**Key Features Implemented:**\n- **Responsive Design**: Works seamlessly on mobile, tablet, and desktop\n- **Mobile-First Approach**: Sidebar collapses on mobile with overlay\n- **Interactive Elements**: Hamburger menu, user dropdown, collapsible project sections\n- **Tailwind Integration**: Uses custom component classes (btn-primary, card, etc.)\n- **TypeScript Support**: Proper type definitions and interfaces\n- **Accessibility**: ARIA labels, keyboard navigation, focus management\n\n**Layout Structure:**\n- Fixed header with sticky positioning\n- Collapsible sidebar (hidden on mobile, persistent on desktop)  \n- Main content area with proper overflow handling\n- Mobile overlay for sidebar navigation\n\n**Visual Elements:**\n- Project indicators with color coding\n- Task count badges\n- User avatars and status indicators\n- Quick action buttons\n- Stats cards with change indicators\n\n**Testing Status:**\n- Layout renders correctly across different screen sizes\n- Mobile menu functionality works\n- User interactions (dropdowns, collapsible sections) function properly\n- Tailwind styles applied consistently\n- No console errors or TypeScript issues\n\nThe layout system is now complete and ready for routing integration!\n</info added on 2025-06-19T01:32:46.618Z>\n<info added on 2025-06-19T02:31:23.207Z>\n🔧 **Fixed Responsive Layout Issues:**\n\n**Problems Identified & Resolved:**\n1. **Layout Structure Issue**: Main content wasn't getting proper spacing for desktop sidebar\n2. **Sidebar Positioning**: Fixed responsive classes from `md:inset-0` to `md:inset-auto`\n3. **Desktop Sidebar**: Added `md:block` to ensure sidebar is always visible on desktop\n4. **Layout Wrapper**: Changed from flex to proper padding-left approach (`md:pl-64`)\n\n**Technical Changes Made:**\n- **Layout.tsx**: Updated wrapper to use `md:pl-64` instead of `md:ml-64`\n- **Layout.tsx**: Changed from flex layout to proper padding approach for desktop\n- **Sidebar.tsx**: Fixed responsive classes for proper desktop/mobile behavior\n- **Sidebar.tsx**: Enhanced mobile overlay with proper accessibility\n\n**Expected Behavior Now:**\n- **Mobile (< 768px)**: Sidebar slides in as overlay with backdrop\n- **Desktop (≥ 768px)**: Sidebar always visible, content adapts with left padding\n- **Close Button**: Should now work properly on mobile\n- **Responsive**: Should properly transition between mobile and desktop views\n\n**Testing Status:**\n- Fixed responsive positioning classes\n- Close button functionality restored\n- Mobile overlay behavior improved\n- Desktop sidebar persistence implemented\n\nThe layout should now properly respond to screen size changes and the close button should function correctly!\n</info added on 2025-06-19T02:31:23.207Z>",
+            "status": "done",
+            "testStrategy": "Test the layout components in different viewport sizes to ensure they respond correctly. Verify that the sidebar collapses on mobile and expands on desktop."
+          },
+          {
+            "id": 5,
+            "title": "Configure React Router and Navigation",
+            "description": "Set up routing configuration with React Router and implement navigation components.",
+            "dependencies": [
+              4
+            ],
+            "details": "Create a routes directory with index.js for route definitions. Set up BrowserRouter in main.jsx. Create route components for main pages (Home, Dashboard, etc.). Implement protected routes for authenticated sections. Add navigation links in the Sidebar component. Create a 404 Not Found page. Implement breadcrumb navigation for nested routes.",
+            "status": "pending",
+            "testStrategy": "Test navigation by clicking through different routes and verifying the correct components are rendered. Test protected routes by attempting to access them without authentication."
+          },
+          {
+            "id": 6,
+            "title": "Create Application Entry Point and Test End-to-End",
+            "description": "Finalize the App component, connect all pieces together, and perform end-to-end testing of the setup.",
+            "dependencies": [
+              3,
+              5
+            ],
+            "details": "Update App.jsx to use the Layout component and routing configuration. Create a theme provider if needed for consistent styling. Implement a basic loading state and error boundary. Add global context providers for state management. Create a simple home page with navigation to all main sections. Ensure all components work together correctly.",
+            "status": "pending",
+            "testStrategy": "Perform an end-to-end test of the application by starting the development server and navigating through all implemented routes. Verify that styles are applied correctly, navigation works, and there are no console errors."
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Implement User Authentication",
+        "description": "Create authentication pages (login, signup, logout) using Supabase Auth with email/password authentication and JWT token security.",
+        "details": "1. Create login and signup forms with email/password fields\n2. Implement form validation for both forms\n3. Connect to Supabase Auth API for user registration and login\n4. Store JWT tokens securely (localStorage or cookies)\n5. Create protected routes that require authentication\n6. Implement a user context/provider to manage auth state\n7. Add logout functionality\n8. Create a password reset flow (optional for MVP)",
+        "testStrategy": "Test user registration with valid and invalid inputs. Verify login functionality and JWT token storage. Test protected routes to ensure they redirect unauthenticated users. Verify logout clears session data properly.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Create Sidebar Navigation Component",
+        "description": "Develop a persistent left-hand sidebar that displays the user's projects and navigation controls for switching between views.",
+        "details": "1. Create a responsive sidebar component that works on both desktop and mobile\n2. Implement collapsible/expandable functionality for mobile view\n3. Add navigation links for Home, Projects, Calendar, etc.\n4. Fetch and display the user's projects from Supabase\n5. Add a 'Create New Project' button\n6. Style using Tailwind CSS with a clean, minimal design\n7. Highlight the active navigation item\n8. Include user profile information/avatar at the top or bottom",
+        "testStrategy": "Test sidebar rendering and responsiveness across different screen sizes. Verify project list fetching and display. Test navigation between different views. Ensure mobile collapse/expand functionality works correctly.",
+        "priority": "medium",
+        "dependencies": [
+          2,
+          3
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Implement Project Management",
+        "description": "Create functionality for users to create, view, edit, and delete projects, as well as manage project members for collaboration.",
+        "details": "1. Create a 'New Project' form with fields for title and description\n2. Implement project listing page showing all projects the user has access to\n3. Add project detail view with edit/delete capabilities\n4. Create a project members management interface\n5. Implement functionality to invite users to projects (by email)\n6. Create database queries to:\n   - Insert new projects\n   - Update existing projects\n   - Delete projects (with cascade to tasks)\n   - Add/remove project members\n7. Ensure proper permissions checking before operations",
+        "testStrategy": "Test project CRUD operations. Verify project listing shows only projects the user has access to. Test adding and removing project members. Verify permissions are enforced correctly for different user roles.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          3,
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Develop Task CRUD Functionality",
+        "description": "Implement the core task management functionality allowing users to create, read, update, and delete tasks within projects.",
+        "details": "1. Create a task form component with fields for:\n   - Title\n   - Description\n   - Status (dropdown)\n   - Due date (date picker)\n   - Assignee (user selector)\n2. Implement modal for task creation/editing\n3. Add task deletion with confirmation\n4. Create Supabase queries for task CRUD operations\n5. Implement form validation\n6. Add keyboard shortcuts for common actions\n7. Ensure proper error handling and user feedback",
+        "testStrategy": "Test task creation, editing, and deletion. Verify form validation works correctly. Test error handling with invalid inputs or network failures. Verify task data is correctly saved to and retrieved from the database.",
+        "priority": "high",
+        "dependencies": [
+          1,
+          5
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Build Kanban Board View",
+        "description": "Create a Kanban board interface with columns for different task statuses (To Do, In Progress, Done) and drag-and-drop functionality.",
+        "details": "1. Install and configure `react-beautiful-dnd`\n2. Create a board component with columns for each status\n3. Implement drag-and-drop functionality between columns\n4. Update task status in the database when moved between columns\n5. Add visual feedback during drag operations\n6. Implement task cards with key information (title, assignee, due date)\n7. Add click handler to open task details modal\n8. Ensure responsive design for different screen sizes\n9. Optimize performance for boards with many tasks",
+        "testStrategy": "Test drag-and-drop functionality between columns. Verify task status updates correctly in the database. Test responsiveness on different devices. Verify task cards display correct information. Test performance with a large number of tasks.",
+        "priority": "high",
+        "dependencies": [
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement Calendar View",
+        "description": "Create a calendar view that displays tasks with due dates in a monthly/weekly layout using react-big-calendar.",
+        "details": "1. Install and configure `react-big-calendar`\n2. Create a calendar component that displays tasks with due dates\n3. Implement view switching (month, week, day)\n4. Add click handlers to view/edit tasks from calendar\n5. Style calendar events based on task status\n6. Implement date navigation (prev/next month, today)\n7. Ensure responsive design for different screen sizes\n8. Add filters for viewing specific project tasks",
+        "testStrategy": "Test calendar rendering with tasks having due dates. Verify view switching between month/week/day. Test task viewing/editing from calendar events. Verify date navigation works correctly. Test responsiveness on different devices.",
+        "priority": "medium",
+        "dependencies": [
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Enable Multi-User Collaboration",
+        "description": "Implement functionality for multiple users to collaborate on shared projects, including project member management and permissions.",
+        "details": "1. Enhance project members management interface\n2. Implement email invitation system for new members\n3. Create user search/selection for adding members\n4. Define and implement permission levels (owner, admin, member)\n5. Update database queries to respect user permissions\n6. Add UI indicators for task ownership/assignment\n7. Implement user avatars and presence indicators\n8. Create project activity feed (optional)",
+        "testStrategy": "Test adding and removing project members. Verify permissions are enforced correctly for different user roles. Test email invitations if implemented. Verify UI correctly shows task ownership and assignments.",
+        "priority": "medium",
+        "dependencies": [
+          5,
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Implement View Switching and Navigation",
+        "description": "Create a unified interface for switching between Board and Calendar views within projects, with consistent navigation and state management.",
+        "details": "1. Create a view selector component (tabs or buttons)\n2. Implement state management for current view\n3. Ensure data consistency between views\n4. Add URL-based navigation (e.g., /project/123/board, /project/123/calendar)\n5. Preserve view preference per user\n6. Add smooth transitions between views\n7. Ensure responsive design for view switching",
+        "testStrategy": "Test switching between Board and Calendar views. Verify URL-based navigation works correctly. Test data consistency between views. Verify view preferences are saved and restored correctly.",
+        "priority": "medium",
+        "dependencies": [
+          7,
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Deploy Application to Vercel and Supabase",
+        "description": "Configure and deploy the frontend application to Vercel and ensure proper connection to the Supabase backend.",
+        "details": "1. Prepare the application for production build\n2. Configure environment variables for production\n3. Set up a Vercel account and project\n4. Configure build settings and environment variables in Vercel\n5. Deploy the frontend application\n6. Test the deployed application\n7. Set up proper CORS configuration in Supabase\n8. Configure custom domain (if applicable)\n9. Set up CI/CD for automatic deployment on code changes",
+        "testStrategy": "Verify the application builds and deploys successfully. Test all functionality in the production environment. Verify authentication works correctly with the production Supabase instance. Test performance and responsiveness of the deployed application.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Implement Final UI Polish and Optimizations",
+        "description": "Refine the user interface, add loading states, error handling, and optimize performance for a production-ready application.",
+        "details": "1. Add loading indicators for async operations\n2. Implement error handling and user-friendly error messages\n3. Add empty states for lists and views\n4. Optimize component rendering and memoization\n5. Implement code splitting for better load times\n6. Add subtle animations and transitions\n7. Ensure consistent styling across all components\n8. Perform accessibility audit and improvements\n9. Optimize for mobile usage\n10. Add final UI polish and refinements",
+        "testStrategy": "Perform usability testing with different user personas. Test loading states and error handling. Verify performance metrics using Lighthouse or similar tools. Test accessibility using screen readers and keyboard navigation. Verify responsive design on various devices.",
+        "priority": "low",
+        "dependencies": [
+          4,
+          7,
+          8,
+          10
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-06-19T00:44:28.142Z",
+      "updated": "2025-06-19T01:32:57.495Z",
+      "description": "Tasks for master context"
+    }
+  }
+}
