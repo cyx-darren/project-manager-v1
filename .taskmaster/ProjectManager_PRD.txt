@@ -112,9 +112,40 @@ Why it’s valuable:
 - created_at
 - updated_at
 
+#### Future SaaS Data Models (Phase 3)
+
+#### `organizations`
+- id
+- name
+- subdomain
+- plan_type
+- billing_status
+- created_at
+- updated_at
+
+#### `organization_members`
+- id
+- organization_id
+- user_id
+- role (owner/admin/member)
+- invited_at
+- joined_at
+
+#### `subscriptions`
+- id
+- organization_id
+- plan_id
+- status
+- billing_cycle
+- current_period_start
+- current_period_end
+- stripe_subscription_id
+
 ### APIs and Integrations
 - Supabase REST/GraphQL or client SDK
 - Optional: Email notifications via Supabase Edge Functions or 3rd-party tools
+- Future: Stripe API for billing and subscription management
+- Future: Third-party SSO providers (Auth0, Okta) for enterprise customers
 
 ### Infrastructure Requirements
 - Supabase Project (1 DB + Auth)
@@ -140,6 +171,21 @@ Why it’s valuable:
 - Customizable columns in Board view  
 - Due date reminders or recurring tasks  
 - Project activity log (audit trail)
+
+### Phase 3: SaaS Evolution
+- Multi-tenant architecture with organization management
+- Subdomain-based tenancy (acme.yoursaas.com)
+- Organization onboarding and management flows
+- Billing and subscription management (Stripe integration)
+- Usage-based billing and subscription plans (free, premium, enterprise)
+- Advanced analytics and reporting for organizations
+- Cross-organization collaboration features
+- API rate limiting and quotas per organization
+- Advanced security features (SSO, SAML, MFA)
+- Custom branding per organization
+- Data export and migration tools
+- Admin dashboard for tenant management
+- Performance monitoring and optimization for multi-tenant scale
 
 # Logical Dependency Chain
 
