@@ -126,6 +126,12 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                       Token Security Demo
                     </a>
                     <a
+                      href="/team"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Team Management
+                    </a>
+                    <a
                       href="/admin"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >

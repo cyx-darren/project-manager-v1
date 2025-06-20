@@ -9,7 +9,8 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   PlusIcon,
-  UserIcon
+  UserIcon,
+  UsersIcon
 } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
@@ -24,6 +25,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navigationItems = [
     { name: 'Dashboard', icon: HomeIcon, href: '/dashboard' },
     { name: 'My Tasks', icon: FolderIcon, href: '/tasks' },
+    { name: 'Team', icon: UsersIcon, href: '/team' },
     { name: 'Calendar', icon: CalendarIcon, href: '/calendar' },
     { name: 'Reports', icon: ChartBarIcon, href: '/reports' },
   ];

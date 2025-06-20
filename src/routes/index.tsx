@@ -10,6 +10,7 @@ import { AuthTest } from '../pages/AuthTest';
 import { AuthCallback } from '../pages/AuthCallback';
 import AuthStateDemo from '../pages/AuthStateDemo';
 import TokenSecurityDemo from '../pages/TokenSecurityDemo';
+import TeamManagement from '../pages/TeamManagement';
 
 // Main application routes
 export const router = createBrowserRouter([
@@ -110,6 +111,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <TokenSecurityDemo />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: '/team',
+    element: (
+      <ProtectedRoute>
+        <TeamManagement />
       </ProtectedRoute>
     )
   },
