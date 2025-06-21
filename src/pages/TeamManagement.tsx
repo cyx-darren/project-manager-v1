@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { teamService, type Project } from '../services/teamService'
 import TeamMemberList from '../components/team/TeamMemberList'
 import AddTeamMember from '../components/team/AddTeamMember'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { AdminOnly } from '../components/auth/RoleGuard'
+import { 
+  CanManageMembers, 
+  ProjectRoleBadge, 
+  ProjectPermissionsList 
+} from '../components/auth/ProjectRoleGuard'
 
 const TeamManagement: React.FC = () => {
   const { user } = useAuth()
+  const { 
+    currentProject, 
+    setCurrentProject, 
+    userRoleInProject, 
+    canManageMembers,
+    refreshProjectData 
+  } = useProject()
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedProject, setSelectedProject] = useState<string>('')
   const [showAddMember, setShowAddMember] = useState(false)
@@ -45,10 +58,12 @@ const TeamManagement: React.FC = () => {
         setProjects(ownedProjects)
         if (ownedProjects.length > 0) {
           setSelectedProject(ownedProjects[0].id)
+          setCurrentProject(ownedProjects[0])
         }
       } else if (userProjects && userProjects.length > 0) {
         setProjects(userProjects)
         setSelectedProject(userProjects[0].id)
+        setCurrentProject(userProjects[0])
       } else {
         // No projects found - this shouldn't happen if the SQL script worked
         setError('No projects found. The database setup may be incomplete.')
@@ -65,16 +80,24 @@ const TeamManagement: React.FC = () => {
     // This will trigger a refresh in the TeamMemberList component
     console.log('Member updated - refreshing list')
     setRefreshKey(prev => prev + 1)
+    // Also refresh project context data
+    refreshProjectData()
   }
 
   const handleProjectChange = (projectId: string) => {
     setSelectedProject(projectId)
     setShowAddMember(false) // Hide add member form when switching projects
+    
+    // Update project context
+    const project = projects.find(p => p.id === projectId)
+    if (project) {
+      setCurrentProject(project)
+    }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <LoadingSpinner />
           <p className="mt-4 text-gray-600">Loading team management...</p>
@@ -85,7 +108,7 @@ const TeamManagement: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <div className="bg-red-50 border border-red-200 rounded-md p-6 max-w-md">
           <div className="flex">
             <div className="ml-3">
@@ -112,8 +135,7 @@ const TeamManagement: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div className="p-6">
         {/* Header */}
         <div className="mb-8">
           <div className="md:flex md:items-center md:justify-between">
@@ -156,28 +178,36 @@ const TeamManagement: React.FC = () => {
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">
-                      {projects.find(p => p.id === selectedProject)?.title}
-                    </h3>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg leading-6 font-medium text-gray-900">
+                        {projects.find(p => p.id === selectedProject)?.title}
+                      </h3>
+                      <ProjectRoleBadge />
+                    </div>
                     <p className="mt-1 text-sm text-gray-500">
                       {projects.find(p => p.id === selectedProject)?.description}
                     </p>
+                    {userRoleInProject && (
+                      <p className="mt-2 text-sm text-gray-600">
+                        Your role: <span className="font-medium">{userRoleInProject}</span>
+                      </p>
+                    )}
                   </div>
-                  <AdminOnly>
+                  <CanManageMembers>
                     <button
                       onClick={() => setShowAddMember(!showAddMember)}
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       {showAddMember ? 'Cancel' : 'Add Member'}
                     </button>
-                  </AdminOnly>
+                  </CanManageMembers>
                 </div>
               </div>
             </div>
 
             {/* Add Team Member Form */}
             {showAddMember && (
-              <AdminOnly>
+              <CanManageMembers>
                 <AddTeamMember
                   projectId={selectedProject}
                   onMemberAdded={() => {
@@ -186,7 +216,7 @@ const TeamManagement: React.FC = () => {
                   }}
                   onCancel={() => setShowAddMember(false)}
                 />
-              </AdminOnly>
+              </CanManageMembers>
             )}
 
             {/* Team Member List */}
@@ -295,7 +325,6 @@ const TeamManagement: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
   )
 }
 

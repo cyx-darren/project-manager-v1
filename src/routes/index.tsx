@@ -11,6 +11,7 @@ import { AuthCallback } from '../pages/AuthCallback';
 import AuthStateDemo from '../pages/AuthStateDemo';
 import TokenSecurityDemo from '../pages/TokenSecurityDemo';
 import TeamManagement from '../pages/TeamManagement';
+import RoleDemo from '../pages/RoleDemo';
 
 // Main application routes
 export const router = createBrowserRouter([
@@ -32,6 +33,17 @@ export const router = createBrowserRouter([
         )
       },
       {
+        path: 'inbox',
+        element: (
+          <ProtectedRoute>
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900">Inbox</h1>
+              <p className="text-gray-600 mt-2">Your notifications and updates...</p>
+            </div>
+          </ProtectedRoute>
+        )
+      },
+      {
         path: 'tasks',
         element: (
           <ProtectedRoute>
@@ -40,6 +52,39 @@ export const router = createBrowserRouter([
               <p className="text-gray-600 mt-2">Task management coming soon...</p>
             </div>
           </ProtectedRoute>
+        )
+      },
+      {
+        path: 'tasks/new',
+        element: (
+          <ProtectedRoute>
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900">Create New Task</h1>
+              <p className="text-gray-600 mt-2">Task creation form coming soon...</p>
+            </div>
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'projects',
+        element: (
+          <ProtectedRoute>
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
+              <p className="text-gray-600 mt-2">Project overview coming soon...</p>
+            </div>
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'projects/new',
+        element: (
+          <PermissionRoute requiredPermissions={['create_projects']}>
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900">Create New Project</h1>
+              <p className="text-gray-600 mt-2">Project creation form coming soon...</p>
+            </div>
+          </PermissionRoute>
         )
       },
       {
@@ -79,6 +124,66 @@ export const router = createBrowserRouter([
             </div>
           </ProtectedRoute>
         )
+      },
+      {
+        path: 'team',
+        element: (
+          <ProtectedRoute>
+            <TeamManagement />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'team/invite',
+        element: (
+          <PermissionRoute requiredPermissions={['manage_users']}>
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900">Invite Team Members</h1>
+              <p className="text-gray-600 mt-2">Team invitation form coming soon...</p>
+            </div>
+          </PermissionRoute>
+        )
+      },
+      {
+        path: 'settings',
+        element: (
+          <ProtectedRoute>
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+              <p className="text-gray-600 mt-2">User settings and preferences...</p>
+            </div>
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'docs',
+        element: (
+          <ProtectedRoute>
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900">Documentation</h1>
+              <p className="text-gray-600 mt-2">Help and documentation...</p>
+            </div>
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'support',
+        element: (
+          <ProtectedRoute>
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900">Support</h1>
+              <p className="text-gray-600 mt-2">Get help and support...</p>
+            </div>
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'role-demo',
+        element: (
+          <ProtectedRoute>
+            <RoleDemo />
+          </ProtectedRoute>
+        )
       }
     ]
   },
@@ -114,14 +219,7 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     )
   },
-  {
-    path: '/team',
-    element: (
-      <ProtectedRoute>
-        <TeamManagement />
-      </ProtectedRoute>
-    )
-  },
+
   {
     path: '/unauthorized',
     element: <Unauthorized />

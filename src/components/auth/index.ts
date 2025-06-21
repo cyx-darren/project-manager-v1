@@ -7,4 +7,14 @@ export {
   PermissionGuard, 
   AccessDenied, 
   UserRoleBadge 
-} from './RoleGuard'; 
+} from './RoleGuard';
+export {
+  ProjectRoleGuard,
+  ProjectOwnerOnly,
+  ProjectAdminOrAbove,
+  ProjectMemberOrAbove,
+  CanManageMembers,
+  CanManageTasks,
+  ProjectRoleBadge,
+  ProjectPermissionsList
+} from './ProjectRoleGuard'; 
