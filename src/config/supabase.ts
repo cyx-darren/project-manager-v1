@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../types/supabase'
 
 // Environment variable validation
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -12,8 +13,8 @@ if (!supabaseAnonKey) {
   throw new Error('Missing VITE_SUPABASE_ANON_KEY environment variable')
 }
 
-// Create Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Create Supabase client with TypeScript support
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -21,10 +22,36 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
+// Helper function to get authenticated client
+export const getAuthenticatedClient = async () => {
+  const { data: { session }, error } = await supabase.auth.getSession()
+  
+  if (error) {
+    throw new Error(`Authentication error: ${error.message}`)
+  }
+  
+  if (!session) {
+    throw new Error('No authenticated session found')
+  }
+  
+  return supabase
+}
+
+// Helper function to get current user
+export const getCurrentUser = async () => {
+  const { data: { user }, error } = await supabase.auth.getUser()
+  
+  if (error) {
+    throw new Error(`Failed to get user: ${error.message}`)
+  }
+  
+  return user
+}
+
 // Helper function to test connection
 export const testSupabaseConnection = async () => {
   try {
-    const { error } = await supabase.from('_test').select('*').limit(1)
+    const { error } = await supabase.from('projects').select('id').limit(1)
     if (error && error.code !== 'PGRST116') { // PGRST116 = table doesn't exist, which is expected
       throw error
     }

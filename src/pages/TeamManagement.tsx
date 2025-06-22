@@ -179,9 +179,9 @@ const TeamManagement: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900">
-                        {projects.find(p => p.id === selectedProject)?.title}
-                      </h3>
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      {projects.find(p => p.id === selectedProject)?.title}
+                    </h3>
                       <ProjectRoleBadge />
                     </div>
                     <p className="mt-1 text-sm text-gray-500">
@@ -324,7 +324,7 @@ const TeamManagement: React.FC = () => {
             </p>
           </div>
         )}
-      </div>
+    </div>
   )
 }
 

@@ -98,11 +98,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               <BellIcon className="h-6 w-6" />
               {/* Dynamic notification badge */}
               {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center">
                   <span className="text-xs font-medium text-white">
                     {loading.stats ? '...' : Math.min(notificationCount, 9)}
                   </span>
-                </span>
+              </span>
               )}
             </button>
 
@@ -119,9 +119,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 </div>
                 <div className="hidden md:block text-left">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-gray-900">
+                  <p className="text-sm font-medium text-gray-900">
                       {user?.email ? user.email.split('@')[0] : 'User'}
-                    </p>
+                  </p>
                     <UserRoleBadge />
                   </div>
                   <p className="text-xs text-gray-500 truncate">
@@ -189,7 +189,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                       <button
                         onClick={() => handleNavigation('/admin')}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
+                    >
                         <CogIcon className="h-4 w-4 mr-3 text-gray-400" />
                         Admin Dashboard
                       </button>
@@ -203,40 +203,40 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                       <button
                         onClick={() => handleNavigation('/auth-demo')}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        Auth Demo
+                    >
+                      Auth Demo
                       </button>
                       <button
                         onClick={() => handleNavigation('/token-security')}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
-                        Token Security Demo
+                    >
+                      Token Security Demo
                       </button>
                       <button
                         onClick={() => handleNavigation('/role-demo')}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
+                    >
                         Role Demo
                       </button>
                       <PermissionGuard permissions={['view_reports']}>
                         <button
                           onClick={() => handleNavigation('/reports')}
                           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        >
-                          Reports (Permission Demo)
+                    >
+                      Reports (Permission Demo)
                         </button>
                       </PermissionGuard>
                     </div>
 
                     {/* Sign out */}
                     <div className="border-t border-gray-100 mt-1 pt-1">
-                      <button
-                        onClick={handleSignOut}
+                    <button
+                      onClick={handleSignOut}
                         className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      >
+                    >
                         <ArrowRightOnRectangleIcon className="h-4 w-4 mr-3 text-gray-400" />
-                        Sign out
-                      </button>
+                      Sign out
+                    </button>
                     </div>
                   </div>
                 </div>

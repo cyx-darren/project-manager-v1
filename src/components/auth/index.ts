@@ -7,7 +7,7 @@ export {
   PermissionGuard, 
   AccessDenied, 
   UserRoleBadge 
-} from './RoleGuard';
+} from './RoleGuard'; 
 export {
   ProjectRoleGuard,
   ProjectOwnerOnly,

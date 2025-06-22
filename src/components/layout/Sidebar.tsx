@@ -202,6 +202,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       description: 'Demonstration of role-based access control',
       keywords: ['roles', 'permissions', 'demo', 'access']
     },
+    { 
+      name: 'API Test', 
+      icon: CogIcon, 
+      href: '/api-test', 
+      shortName: 'API',
+      public: true,
+      category: 'admin',
+      isNew: true,
+      description: 'Test API endpoints and verify functionality',
+      keywords: ['api', 'test', 'endpoints', 'debug']
+    },
 
     // Help Navigation
     { 
@@ -500,15 +511,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           
           {/* Mobile close button */}
           {isMobile && (
-            <button
-              onClick={onClose}
+          <button
+            onClick={onClose}
               className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors ml-2"
-            >
-              <span className="sr-only">Close sidebar</span>
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+          >
+            <span className="sr-only">Close sidebar</span>
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
           )}
         </div>
         
@@ -579,9 +590,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
           {/* Collapsed Quick Actions - Create Task only */}
           {isCollapsed && !isMobile && user && (
-            <div className="mt-8 px-3">
+          <div className="mt-8 px-3">
               <div className="relative mb-1">
-                <button 
+              <button
                   onClick={() => navigate('/tasks/new')}
                   className="group relative flex items-center justify-center w-full h-12 px-3 rounded-lg transition-all duration-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                   title="Create Task"
@@ -594,7 +605,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     Create Task
                     <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 border-4 border-transparent border-r-gray-900"></div>
                   </div>
-                </button>
+              </button>
               </div>
             </div>
           )}
@@ -627,7 +638,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     <span className="text-sm font-medium text-white">
                       {user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
                     </span>
-                  </div>
+              </div>
                   {(!isCollapsed || isMobile) && (
                     <>
                       <div className="ml-3 flex-1 min-w-0">
@@ -638,8 +649,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                           <UserRoleBadge />
                           {isConnected && (
                             <WifiIcon className="h-3 w-3 text-green-500" title="Real-time updates active" />
-                          )}
-                        </div>
+            )}
+          </div>
                         <p className="text-xs text-gray-500 truncate">
                           {user?.email || 'user@example.com'}
                         </p>
@@ -652,18 +663,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                             title="Retry loading data"
                           >
                             <ExclamationCircleIcon className="h-4 w-4" />
-                          </button>
+              </button>
                         )}
                         <button 
                           onClick={() => navigate('/settings')}
                           className="p-1 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors"
                         >
                           <CogIcon className="h-4 w-4" />
-                        </button>
-                      </div>
+              </button>
+            </div>
                     </>
                   )}
-                </div>
+          </div>
               )}
             </div>
           </div>
@@ -673,4 +684,4 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   );
 };
 
-export default Sidebar;
+export default Sidebar; 

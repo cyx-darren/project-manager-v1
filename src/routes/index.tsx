@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import Dashboard from '../pages/Dashboard';
+import Projects from '../pages/Projects';
+import ProjectDetail from '../pages/ProjectDetail';
 import NotFound from '../pages/NotFound';
 import Unauthorized from '../pages/Unauthorized';
 import ProtectedRoute, { AdminRoute, PermissionRoute } from '../components/ProtectedRoute';
@@ -12,6 +14,8 @@ import AuthStateDemo from '../pages/AuthStateDemo';
 import TokenSecurityDemo from '../pages/TokenSecurityDemo';
 import TeamManagement from '../pages/TeamManagement';
 import RoleDemo from '../pages/RoleDemo';
+import ApiTester from '../components/dev/ApiTester'
+import PermissionDemo from '../components/dev/PermissionDemo';
 
 // Main application routes
 export const router = createBrowserRouter([
@@ -69,10 +73,7 @@ export const router = createBrowserRouter([
         path: 'projects',
         element: (
           <ProtectedRoute>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-              <p className="text-gray-600 mt-2">Project overview coming soon...</p>
-            </div>
+            <Projects />
           </ProtectedRoute>
         )
       },
@@ -118,10 +119,7 @@ export const router = createBrowserRouter([
         path: 'projects/:projectId',
         element: (
           <ProtectedRoute>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold text-gray-900">Project Details</h1>
-              <p className="text-gray-600 mt-2">Project view coming soon...</p>
-            </div>
+            <ProjectDetail />
           </ProtectedRoute>
         )
       },
@@ -184,6 +182,22 @@ export const router = createBrowserRouter([
             <RoleDemo />
           </ProtectedRoute>
         )
+      },
+      {
+        path: 'api-test',
+        element: (
+          <ProtectedRoute>
+            <ApiTester />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'permission-demo',
+        element: (
+          <ProtectedRoute>
+            <PermissionDemo />
+          </ProtectedRoute>
+        )
       }
     ]
   },
@@ -219,7 +233,6 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     )
   },
-
   {
     path: '/unauthorized',
     element: <Unauthorized />
