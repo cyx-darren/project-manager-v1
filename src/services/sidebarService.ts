@@ -1,4 +1,4 @@
-// import { supabase } from '../config/supabase' // TODO: Uncomment when database queries are implemented
+import { supabase, getCurrentUser } from '../config/supabase'
 
 export interface SidebarProject {
   id: string
@@ -38,7 +38,7 @@ export interface SidebarStats {
 /**
  * Sidebar Service
  * Handles fetching dynamic content specifically for the sidebar navigation
- * Currently uses mock data until proper database tables are set up
+ * Uses real database queries for search functionality
  */
 class SidebarService {
   /**
@@ -225,30 +225,40 @@ class SidebarService {
   }
 
   /**
-   * Search projects by title
+   * Search projects by title using real database queries
    */
-  async searchProjects(userId: string, query: string): Promise<{ data: SidebarProject[] | null; error: any }> {
+  async searchProjects(userId: string, query: string): Promise<{ data: any[] | null; error: any }> {
     try {
       if (!query.trim()) {
         return { data: [], error: null }
       }
 
-      const { data: projects, error } = await this.getUserProjectsWithStats(userId)
-      
-      if (error || !projects) {
-        return { data: null, error }
+      const user = await getCurrentUser()
+      if (!user) {
+        return { data: null, error: 'User not authenticated' }
       }
 
-      // Filter projects by title (case-insensitive)
-      const filteredProjects = projects.filter(project =>
-        project.title.toLowerCase().includes(query.toLowerCase()) ||
-        (project.description && project.description.toLowerCase().includes(query.toLowerCase()))
-      )
+      // Search projects the user has access to
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          project_members!inner(role, user_id)
+        `)
+        .eq('project_members.user_id', user.id)
+        .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+        .order('updated_at', { ascending: false })
+        .limit(25)
 
-      return { data: filteredProjects, error: null }
+      if (error) {
+        console.error('Error searching projects in database:', error)
+        return { data: null, error: error.message }
+      }
+
+      return { data: data || [], error: null }
     } catch (error) {
       console.error('Error searching projects:', error)
-      return { data: null, error }
+      return { data: null, error: error instanceof Error ? error.message : 'Search failed' }
     }
   }
 
@@ -259,30 +269,16 @@ class SidebarService {
   subscribeToProjectUpdates(userId: string, callback: (payload: any) => void) {
     console.log('Setting up mock subscription for user:', userId)
     
-    // Create a mock subscription that doesn't actually connect to Supabase
-    // This prevents the subscription errors while we're using mock data
+    // Create a simple mock subscription that doesn't trigger any async operations
+    // This prevents the subscription errors and async conflicts
     const mockSubscription = {
       unsubscribe: () => {
         console.log('Mock subscription unsubscribed')
       }
     }
     
-    // Simulate occasional updates for demo purposes
-    const interval = setInterval(() => {
-      callback({
-        eventType: 'UPDATE',
-        table: 'projects',
-        new: { id: 'mock-update' },
-        old: null
-      })
-    }, 30000) // Every 30 seconds
-    
-    // Store interval in the mock subscription for cleanup
-    ;(mockSubscription as any).interval = interval
-    ;(mockSubscription as any).unsubscribe = () => {
-      console.log('Mock subscription unsubscribed')
-      clearInterval(interval)
-    }
+    // Don't create any intervals or async operations that could conflict with search
+    // The subscription is just a no-op for now
     
     return mockSubscription as any
     

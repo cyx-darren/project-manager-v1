@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   MagnifyingGlassIcon, 
   BellIcon, 
@@ -10,9 +11,9 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProject } from '../../contexts/ProjectContext';
-import { useSidebarData } from '../../hooks/useSidebarData';
+import { sidebarService } from '../../services/sidebarService';
 import { UserRoleBadge, AdminOnly, PermissionGuard } from '../auth';
-import { useNavigate } from 'react-router-dom';
+import { GlobalSearch } from '../search';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -22,8 +23,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { currentProject } = useProject();
-  const { stats, loading } = useSidebarData();
   const navigate = useNavigate();
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [loading, setLoading] = useState({ stats: false });
 
   const handleSignOut = async () => {
     try {
@@ -41,11 +43,29 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
   // Get user initials for avatar
   const getUserInitials = (email: string) => {
-    return email.charAt(0).toUpperCase();
+    return email.split('@')[0].slice(0, 2).toUpperCase();
   };
 
-  // Get dynamic notification count
-  const notificationCount = loading.stats ? 0 : (stats?.notifications || 0);
+  // Load notification count
+  useEffect(() => {
+    const loadNotificationCount = async () => {
+      if (!user) return;
+      
+      setLoading(prev => ({ ...prev, stats: true }));
+      try {
+        const { data } = await sidebarService.getSidebarStats(user.id);
+        if (data) {
+          setNotificationCount(data.notifications || 0);
+        }
+      } catch (error) {
+        console.error('Error loading notification count:', error);
+      } finally {
+        setLoading(prev => ({ ...prev, stats: false }));
+      }
+    };
+
+    loadNotificationCount();
+  }, [user]);
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
@@ -63,16 +83,12 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             </button>
             
             {/* Search bar */}
-            <div className="flex-1 max-w-lg ml-4 md:ml-0">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search tasks, projects..."
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 text-sm transition-colors"
-                />
+            <div className="flex-1 max-w-lg ml-4 md:ml-0 relative">
+              <GlobalSearch placeholder="Search tasks, projects..." />
+              {/* Keyboard shortcut hint */}
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 hidden sm:flex items-center space-x-1 text-xs text-gray-400 pointer-events-none">
+                <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs">⌘</kbd>
+                <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs">K</kbd>
               </div>
             </div>
 

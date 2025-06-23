@@ -385,6 +385,51 @@ export const taskService = {
   },
 
   /**
+   * Search tasks across all projects (global search)
+   */
+  async searchTasksGlobal(query: string): Promise<ApiResponse<Task[]>> {
+    try {
+      const user = await getCurrentUser()
+      if (!user) {
+        throw new TaskPermissionError('Must be authenticated to search tasks')
+      }
+
+      // Search tasks across all projects the user has access to
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          projects!inner(
+            id,
+            title,
+            project_members!inner(user_id)
+          )
+        `)
+        .eq('projects.project_members.user_id', user.id)
+        .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+        .order('updated_at', { ascending: false })
+        .limit(50) // Limit to prevent too many results
+
+      if (error) {
+        throw new TaskError(error.message, error.code)
+      }
+
+      return {
+        data: data || [],
+        error: null,
+        success: true
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to search tasks globally'
+      return {
+        data: null,
+        error: message,
+        success: false
+      }
+    }
+  },
+
+  /**
    * Update task order and status for drag and drop
    */
   async updateTaskOrder(id: string, newStatus: 'todo' | 'in_progress' | 'done', newOrderIndex: number): Promise<ApiResponse<Task>> {

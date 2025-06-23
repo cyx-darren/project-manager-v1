@@ -4,9 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { X, Plus, Save, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { InputField, TextAreaField, SelectField } from '../forms';
+import { UserSelector } from '../common';
 import { taskService } from '../../services/taskService';
+import { teamService } from '../../services/teamService';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Task } from '../../types/supabase';
+import type { AssignableUser } from '../../services/teamService';
 
 // Simple form schema for the modal
 const taskFormSchema = z.object({
@@ -16,7 +19,6 @@ const taskFormSchema = z.object({
   status: z.enum(['todo', 'in_progress', 'done']),
   due_date: z.string().optional(),
   estimated_hours: z.coerce.number().optional(),
-  assignee_id: z.string().optional(),
 });
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
@@ -43,8 +45,32 @@ const TaskModal: React.FC<TaskModalProps> = ({
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  
+  // User assignment state
+  const [assignees, setAssignees] = useState<AssignableUser[]>([]);
+  const [selectedAssignee, setSelectedAssignee] = useState<AssignableUser | null>(null);
+  const [isLoadingAssignees, setIsLoadingAssignees] = useState(false);
 
   const isEditing = !!task;
+
+  // Load project assignees
+  const loadProjectAssignees = async () => {
+    if (!projectId) return;
+    
+    setIsLoadingAssignees(true);
+    try {
+      const { data, error } = await teamService.getProjectAssignees(projectId);
+      if (error) {
+        console.error('Error loading assignees:', error);
+      } else {
+        setAssignees(data || []);
+      }
+    } catch (error) {
+      console.error('Error loading assignees:', error);
+    } finally {
+      setIsLoadingAssignees(false);
+    }
+  };
 
   const {
     register,
@@ -60,9 +86,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
       status: 'todo',
       due_date: '',
       estimated_hours: undefined,
-      assignee_id: '',
     }
   });
+
+  // Load project assignees when modal opens
+  useEffect(() => {
+    if (isOpen && projectId) {
+      loadProjectAssignees();
+    }
+  }, [isOpen, projectId]);
 
   // Reset form when task changes or modal opens/closes
   useEffect(() => {
@@ -76,8 +108,15 @@ const TaskModal: React.FC<TaskModalProps> = ({
           status: task.status,
           due_date: task.due_date ? task.due_date.split('T')[0] : '',
           estimated_hours: task.estimated_hours || undefined,
-          assignee_id: task.assignee_id || '',
         });
+        
+        // Set selected assignee if task has one
+        if (task.assignee_id && assignees.length > 0) {
+          const assignee = assignees.find(a => a.id === task.assignee_id);
+          setSelectedAssignee(assignee || null);
+        } else {
+          setSelectedAssignee(null);
+        }
       } else {
         // Creating mode - reset to defaults
         reset({
@@ -87,12 +126,12 @@ const TaskModal: React.FC<TaskModalProps> = ({
           status: 'todo',
           due_date: '',
           estimated_hours: undefined,
-          assignee_id: '',
         });
+        setSelectedAssignee(null);
       }
       setSubmitError(null);
     }
-  }, [isOpen, task, reset]);
+  }, [isOpen, task, reset, assignees]);
 
   const onSubmit = async (data: TaskFormData) => {
     if (!user) return;
@@ -109,7 +148,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         status: data.status,
         due_date: data.due_date || null,
         estimated_hours: data.estimated_hours || null,
-        assignee_id: data.assignee_id || null,
+        assignee_id: selectedAssignee?.id || null,
       };
 
       if (isEditing && task) {
@@ -190,7 +229,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         />
         
         {/* Modal */}
-        <div className="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl sm:p-6">
+        <div className="relative transform rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl sm:p-6" style={{ overflow: 'visible' }}>
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-gray-900">
@@ -205,7 +244,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 overflow-visible">
             {/* Task Title */}
             <InputField
               label="Task Title"
@@ -270,15 +309,22 @@ const TaskModal: React.FC<TaskModalProps> = ({
             </div>
 
             {/* Assignee */}
-            {assigneeOptions.length > 1 && (
-              <SelectField
-                label="Assignee"
-                name="assignee_id"
-                register={register}
-                error={errors.assignee_id}
-                options={assigneeOptions}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Assignee
+              </label>
+              <UserSelector
+                users={assignees}
+                selectedUser={selectedAssignee}
+                onUserSelect={setSelectedAssignee}
+                placeholder="Select assignee..."
+                disabled={isLoadingAssignees}
+                allowUnassigned={true}
               />
-            )}
+              {isLoadingAssignees && (
+                <p className="mt-1 text-xs text-gray-500">Loading team members...</p>
+              )}
+            </div>
 
             {/* Submit Error */}
             {submitError && (

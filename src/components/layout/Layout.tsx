@@ -3,10 +3,23 @@ import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Breadcrumb from '../Breadcrumb';
+import { SearchModal } from '../search';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Set up global keyboard shortcuts
+  useKeyboardShortcuts({
+    onSearch: () => setSearchModalOpen(true),
+    onEscape: () => {
+      if (searchModalOpen) {
+        setSearchModalOpen(false);
+      }
+    }
+  });
 
   // Handle mobile detection
   useEffect(() => {
@@ -66,6 +79,12 @@ const Layout: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* Global Search Modal */}
+      <SearchModal 
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+      />
     </div>
   );
 };

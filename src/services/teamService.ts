@@ -3,6 +3,16 @@ import type { User } from '@supabase/supabase-js'
 
 export type MemberRole = 'owner' | 'admin' | 'member'
 
+// Simplified user interface for assignment purposes
+export interface AssignableUser {
+  id: string
+  email?: string
+  user_metadata?: {
+    full_name?: string
+    avatar_url?: string
+  }
+}
+
 export interface TeamMember {
   id: string
   user_id: string
@@ -22,10 +32,13 @@ export interface TeamMember {
 export interface Project {
   id: string
   title: string
-  description?: string
+  description: string | null
   owner_id: string
   created_at: string
   updated_at: string
+  color: string | null
+  status: 'active' | 'completed' | 'archived' | 'template' | null
+  is_template: boolean | null
 }
 
 export interface TeamInvitation {
@@ -294,21 +307,55 @@ class TeamService {
   }
 
   /**
-   * Search for users by email (for adding to team)
+   * Get available assignees for a project (project members only)
    */
-  async searchUsersByEmail(email: string): Promise<{ data: User[] | null; error: any }> {
+  async getProjectAssignees(projectId: string): Promise<{ data: AssignableUser[] | null; error: any }> {
     try {
-      // Note: This is a simplified search. In production, you might want to implement
-      // a more sophisticated user search system or use Supabase's admin API
-      const { data, error } = await supabase
-        .from('profiles') // Assuming you have a profiles table
-        .select('*')
-        .ilike('email', `%${email}%`)
-        .limit(10)
+      const { data: members, error } = await this.getProjectMembers(projectId)
+      
+      if (error || !members) {
+        return { data: null, error }
+      }
 
-      return { data, error }
+      // Extract users from team members
+      const assignees: AssignableUser[] = members
+        .filter(member => member.user)
+        .map(member => ({
+          id: member.user!.id,
+          email: member.user!.email,
+          user_metadata: member.user!.user_metadata
+        }))
+
+      return { data: assignees, error: null }
     } catch (error) {
-      console.error('Error searching users:', error)
+      console.error('Error getting project assignees:', error)
+      return { data: null, error }
+    }
+  }
+
+  /**
+   * Search assignees within a project
+   */
+  async searchProjectAssignees(projectId: string, searchTerm: string): Promise<{ data: AssignableUser[] | null; error: any }> {
+    try {
+      const { data: assignees, error } = await this.getProjectAssignees(projectId)
+      
+      if (error || !assignees) {
+        return { data: null, error }
+      }
+
+      // Filter assignees by search term
+      const filteredAssignees = assignees.filter(user => {
+        const email = user.email?.toLowerCase() || ''
+        const name = user.user_metadata?.full_name?.toLowerCase() || ''
+        const term = searchTerm.toLowerCase()
+        
+        return email.includes(term) || name.includes(term)
+      })
+
+      return { data: filteredAssignees, error: null }
+    } catch (error) {
+      console.error('Error searching project assignees:', error)
       return { data: null, error }
     }
   }

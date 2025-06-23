@@ -7,6 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProjectProvider } from './contexts/ProjectContext'
+import { SearchProvider } from './contexts/SearchContext'
 // Import initialization and health checks
 import './App'
 
@@ -25,7 +26,9 @@ createRoot(document.getElementById('root')!).render(
       <ThemeProvider>
         <AuthProvider>
           <ProjectProvider>
-            <RouterProvider router={router} />
+            <SearchProvider>
+              <RouterProvider router={router} />
+            </SearchProvider>
           </ProjectProvider>
         </AuthProvider>
       </ThemeProvider>

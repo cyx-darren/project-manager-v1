@@ -1,7 +1,10 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { CheckCircle, Clock, AlertTriangle, Edit } from 'lucide-react'
 import type { Task } from '../../types/supabase'
 import { usePermission } from '../../hooks/usePermissions'
+import { AssigneeAvatar } from '../common'
+import { teamService } from '../../services/teamService'
+import type { AssignableUser } from '../../services/teamService'
 import InlineTaskEdit from './InlineTaskEdit'
 
 interface TaskCardProps {
@@ -22,6 +25,28 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   className = ''
 }) => {
   const canEditTasks = usePermission('task.edit', { projectId })
+  const [assignee, setAssignee] = useState<AssignableUser | null>(null)
+
+  // Load assignee details when task changes
+  useEffect(() => {
+    const loadAssignee = async () => {
+      if (task.assignee_id && projectId) {
+        try {
+          const { data: assignees } = await teamService.getProjectAssignees(projectId)
+          if (assignees) {
+            const taskAssignee = assignees.find(user => user.id === task.assignee_id)
+            setAssignee(taskAssignee || null)
+          }
+        } catch (error) {
+          console.error('Error loading assignee:', error)
+        }
+      } else {
+        setAssignee(null)
+      }
+    }
+
+    loadAssignee()
+  }, [task.assignee_id, projectId])
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -106,12 +131,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 {task.description}
               </p>
             )}
-            <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
-              {task.due_date && (
-                <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
-              )}
-              {task.assignee_id && (
-                <span>Assigned to: User {task.assignee_id}</span>
+            <div className="mt-2 flex items-center justify-between">
+              <div className="flex items-center space-x-4 text-xs text-gray-500">
+                {task.due_date && (
+                  <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
+                )}
+              </div>
+              {/* Assignee Avatar */}
+              {(task.assignee_id || assignee) && (
+                <div className="flex items-center space-x-2">
+                  <AssigneeAvatar 
+                    user={assignee} 
+                    size="sm" 
+                    showTooltip={true}
+                  />
+                </div>
               )}
             </div>
           </div>
