@@ -238,6 +238,10 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
     ))
   }
 
+  const handleTaskDeleted = (taskId: string) => {
+    onTasksUpdate(tasks.filter(task => task.id !== taskId))
+  }
+
   const handleCloseModal = () => {
     setIsTaskModalOpen(false)
     setEditingTask(null)
@@ -282,6 +286,7 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
                 projectId={project.id}
                 onTaskUpdated={handleTaskUpdated}
                 onEditTask={handleEditTask}
+                onTaskDeleted={handleTaskDeleted}
                 activeTaskId={activeTask?.id || null}
                 overId={overId}
               />

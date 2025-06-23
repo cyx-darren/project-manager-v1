@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
-import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Edit } from 'lucide-react'
+import React, { useState, useMemo } from 'react'
+import { Plus, Search, Filter, CheckCircle, Clock, AlertTriangle, Edit, Trash2 } from 'lucide-react'
 import type { Project, Task } from '../../types/supabase'
 import { usePermission } from '../../hooks/usePermissions'
 import { TaskModal, InlineTaskEdit } from '../tasks'
+import { taskService } from '../../services/taskService'
 
 interface ProjectTaskListProps {
   project: Project
@@ -20,9 +21,12 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'urgent'>('all')
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
 
   const canCreateTasks = usePermission('task.create', { projectId: project.id })
   const canEditTasks = usePermission('task.edit', { projectId: project.id })
+  const canDeleteTasks = usePermission('task.delete', { projectId: project.id })
 
   // Filter tasks based on search and filters
   const filteredTasks = tasks.filter(task => {
@@ -105,6 +109,23 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
     setEditingTask(null)
   }
 
+  const handleTaskDeleted = async (taskId: string) => {
+    if (!canDeleteTasks) return
+    
+    try {
+      const result = await taskService.deleteTask(taskId)
+      if (result.success) {
+        onTasksUpdate(tasks.filter(task => task.id !== taskId))
+        setShowDeleteConfirm(null)
+      } else {
+        alert('Failed to delete task: ' + result.error)
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error)
+      alert('Failed to delete task')
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header with Create Task Button */}
@@ -181,12 +202,12 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
             {filteredTasks.map((task) => (
               <li key={task.id} className="px-6 py-4 hover:bg-gray-50">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3 flex-1">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
                     {getStatusIcon(task.status)}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
                         {canEditTasks ? (
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <InlineTaskEdit 
                               task={task} 
                               onTaskUpdated={handleTaskUpdated}
@@ -198,13 +219,23 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
                           </h3>
                         )}
                         {isOverdue(task.due_date) && task.status !== 'done' && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 flex-shrink-0">
                             Overdue
                           </span>
                         )}
                       </div>
                       {task.description && (
-                        <p className="mt-1 text-sm text-gray-500 truncate">
+                        <p 
+                          className="mt-1 text-sm text-gray-500 line-clamp-2 hover:line-clamp-none transition-all duration-200 cursor-help" 
+                          title={task.description}
+                          style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            wordBreak: 'break-word'
+                          }}
+                        >
                           {task.description}
                         </p>
                       )}
@@ -219,7 +250,7 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
                       {task.status.replace('_', ' ')}
                     </span>
@@ -233,6 +264,15 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
                         title="Edit task"
                       >
                         <Edit size={14} />
+                      </button>
+                    )}
+                    {canDeleteTasks && (
+                      <button
+                        onClick={() => setShowDeleteConfirm(task.id)}
+                        className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Delete task"
+                      >
+                        <Trash2 size={14} />
                       </button>
                     )}
                   </div>
@@ -279,6 +319,41 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
         task={editingTask}
         teamMembers={[]} // TODO: Add real team members when team management is implemented
       />
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mt-2">Delete Task</h3>
+              <div className="mt-2 px-7 py-3">
+                <p className="text-sm text-gray-500">
+                  Are you sure you want to delete this task? This action cannot be undone.
+                </p>
+              </div>
+              <div className="items-center px-4 py-3">
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(null)}
+                    className="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleTaskDeleted(showDeleteConfirm)}
+                    className="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

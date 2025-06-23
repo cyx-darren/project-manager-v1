@@ -12,6 +12,7 @@ interface DroppableColumnProps {
   projectId: string
   onTaskUpdated: (task: Task) => void
   onEditTask: (task: Task) => void
+  onTaskDeleted?: (taskId: string) => void
   activeTaskId?: string | null
   overId?: string | null
 }
@@ -23,6 +24,7 @@ export const DroppableColumn: React.FC<DroppableColumnProps> = ({
   projectId,
   onTaskUpdated,
   onEditTask,
+  onTaskDeleted,
   activeTaskId,
   overId
 }) => {
@@ -124,6 +126,7 @@ export const DroppableColumn: React.FC<DroppableColumnProps> = ({
                           projectId={projectId}
                           onTaskUpdated={onTaskUpdated}
                           onEditTask={onEditTask}
+                          onTaskDeleted={onTaskDeleted}
                         />
                       ))}
                       {activeTaskId !== overId && (
@@ -136,6 +139,7 @@ export const DroppableColumn: React.FC<DroppableColumnProps> = ({
                           projectId={projectId}
                           onTaskUpdated={onTaskUpdated}
                           onEditTask={onEditTask}
+                          onTaskDeleted={onTaskDeleted}
                         />
                       ))}
                     </>
@@ -151,6 +155,7 @@ export const DroppableColumn: React.FC<DroppableColumnProps> = ({
                   projectId={projectId}
                   onTaskUpdated={onTaskUpdated}
                   onEditTask={onEditTask}
+                  onTaskDeleted={onTaskDeleted}
                 />
               ))
             })()}

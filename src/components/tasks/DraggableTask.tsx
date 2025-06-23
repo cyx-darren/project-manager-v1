@@ -10,13 +10,15 @@ interface DraggableTaskProps {
   projectId: string
   onTaskUpdated: (task: Task) => void
   onEditTask: (task: Task) => void
+  onTaskDeleted?: (taskId: string) => void
 }
 
 export const DraggableTask: React.FC<DraggableTaskProps> = ({
   task,
   projectId,
   onTaskUpdated,
-  onEditTask
+  onEditTask,
+  onTaskDeleted
 }) => {
   const {
     attributes,
@@ -46,16 +48,16 @@ export const DraggableTask: React.FC<DraggableTaskProps> = ({
       style={style}
       className={`
         ${isDragging ? 'opacity-30' : ''}
-        ${canEditTasks ? 'cursor-grab active:cursor-grabbing' : ''}
       `}
       {...attributes}
-      {...(canEditTasks ? listeners : {})}
     >
       <TaskCard
         task={task}
         projectId={projectId}
         onTaskUpdated={onTaskUpdated}
         onEditTask={onEditTask}
+        onTaskDeleted={onTaskDeleted}
+        dragListeners={canEditTasks ? listeners : undefined}
       />
     </div>
   )
