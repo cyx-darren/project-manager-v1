@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import type { Project, Task } from '../types/supabase'
-import { projectService, taskService } from '../services'
+import { projectService } from '../services'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { 
   ProjectHeader, 
   ProjectTabs, 
   ProjectOverview, 
   ProjectTaskList,
-  KanbanTaskBoard,
+  CustomKanbanBoard,
   ProjectTeam 
 } from '../components/projects'
 import { useAuth } from '../contexts/AuthContext'
 import { useTaskContext } from '../contexts/TaskContext'
+import { useProject } from '../contexts/ProjectContext'
 
 type TabType = 'overview' | 'tasks' | 'team' | 'calendar' | 'board'
 
@@ -21,6 +22,7 @@ const ProjectDetail: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { tasks, loading: tasksLoading, loadTasks, clearTasks } = useTaskContext()
+  const { setCurrentProject } = useProject()
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +50,8 @@ const ProjectDetail: React.FC = () => {
         const projectResponse = await projectService.getProjectById(projectId)
         if (projectResponse.success && projectResponse.data) {
           setProject(projectResponse.data)
+          // Set current project in ProjectContext for breadcrumb
+          setCurrentProject(projectResponse.data)
         } else {
           throw new Error(projectResponse.error || 'Failed to fetch project')
         }
@@ -64,14 +68,15 @@ const ProjectDetail: React.FC = () => {
     }
 
     fetchProjectData()
-  }, [projectId, navigate, loadTasks])
+  }, [projectId, navigate, loadTasks, setCurrentProject])
 
-  // Cleanup tasks when leaving project
+  // Cleanup tasks and project context when leaving project
   useEffect(() => {
     return () => {
       clearTasks()
+      setCurrentProject(null)
     }
-  }, [clearTasks])
+  }, [clearTasks, setCurrentProject])
 
   const handleProjectUpdate = async (updates: Partial<Project>) => {
     if (!project || !projectId) return
@@ -159,40 +164,45 @@ const ProjectDetail: React.FC = () => {
     switch (activeTab) {
       case 'overview':
         return (
-          <ProjectOverview 
-            project={project} 
-            tasks={tasks}
-            onProjectUpdate={handleProjectUpdate}
-          />
+          <div className="px-6 py-6">
+            <ProjectOverview 
+              project={project} 
+              tasks={tasks}
+              onProjectUpdate={handleProjectUpdate}
+            />
+          </div>
         )
       case 'tasks':
         return (
-          <ProjectTaskList 
-            project={project}
-            tasks={tasks}
-            onTasksUpdate={handleTasksUpdate}
-          />
+          <div className="px-6 py-6">
+            <ProjectTaskList 
+              project={project}
+              tasks={tasks}
+              onTasksUpdate={handleTasksUpdate}
+            />
+          </div>
         )
       case 'team':
         return (
-          <ProjectTeam 
-            project={project}
-            onProjectUpdate={handleProjectUpdate}
-          />
+          <div className="px-6 py-6">
+            <ProjectTeam 
+              project={project}
+              onProjectUpdate={handleProjectUpdate}
+            />
+          </div>
         )
       case 'calendar':
         return (
-          <div className="p-6">
+          <div className="px-6 py-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Calendar View</h3>
             <p className="text-gray-600">Calendar view coming soon...</p>
           </div>
         )
       case 'board':
         return (
-          <div className="p-6">
-            <KanbanTaskBoard 
+          <div className="flex-1">
+            <CustomKanbanBoard 
               project={project}
-              tasks={tasks}
               onTasksUpdate={handleTasksUpdate}
             />
           </div>
@@ -203,23 +213,28 @@ const ProjectDetail: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <ProjectHeader 
-        project={project}
-        onUpdate={handleProjectUpdate}
-        onDelete={handleProjectDelete}
-      />
+    <div className="flex-1 overflow-auto">
+      {/* Project Header - aligned with tabs and other sections */}
+      <div className="px-6 pb-4">
+        <ProjectHeader 
+          project={project}
+          onUpdate={handleProjectUpdate}
+          onDelete={handleProjectDelete}
+        />
+      </div>
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Tabs - consistent padding */}
+      <div className="px-6 border-b border-gray-200">
         <ProjectTabs 
           activeTab={activeTab}
           onTabChange={setActiveTab}
           project={project}
         />
-        
-        <div className="mt-6">
-          {renderTabContent()}
-        </div>
+      </div>
+      
+      {/* Tab content */}
+      <div className="flex-1 flex flex-col">
+        {renderTabContent()}
       </div>
     </div>
   )

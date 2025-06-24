@@ -53,6 +53,7 @@ interface TaskContextValue {
   updateTaskStatus: (id: string, status: 'todo' | 'in_progress' | 'done') => Promise<Task | null>
   updateTaskOrder: (id: string, newStatus: 'todo' | 'in_progress' | 'done', newOrderIndex: number) => Promise<Task | null>
   batchUpdateTaskOrders: (updates: Array<{ id: string; order_index: number }>) => Promise<boolean>
+  moveTaskToColumn: (taskId: string, columnId: string, newOrderIndex?: number) => Promise<Task | null>
   
   // Optimistic updates
   optimisticUpdate: (id: string, updates: Partial<Task>) => void
@@ -442,6 +443,71 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     }
   }, [showError])
 
+  // Move task to column with optimistic update
+  const moveTaskToColumn = useCallback(async (
+    taskId: string, 
+    columnId: string, 
+    newOrderIndex?: number
+  ): Promise<Task | null> => {
+    // Store state before change for history
+    const previousState = [...state.tasks]
+    const task = state.tasks.find(t => t.id === taskId)
+    
+    if (!task) {
+      showError('Task Not Found', 'Task could not be found')
+      return null
+    }
+
+    // Apply optimistic update immediately
+    const updates: Partial<Task> = { column_id: columnId }
+    if (newOrderIndex !== undefined) {
+      updates.order_index = newOrderIndex
+    }
+    
+    dispatch({ 
+      type: 'OPTIMISTIC_UPDATE', 
+      payload: { id: taskId, updates } 
+    })
+
+    try {
+      const response = await taskService.moveTaskToColumn(taskId, columnId, newOrderIndex)
+      if (response.success && response.data) {
+        // Replace optimistic update with real data
+        dispatch({ type: 'UPDATE_TASK', payload: { id: taskId, updates: response.data } })
+        
+        // Add to history for undo/redo functionality
+        const currentState = state.tasks.map(t => 
+          t.id === taskId ? { ...t, ...updates } : t
+        )
+        addToHistory(
+          'move',
+          `Moved task to column ${columnId}`,
+          previousState,
+          currentState
+        )
+        
+        return response.data
+      } else {
+        // Revert optimistic update on failure
+        const originalTask = state.optimisticUpdates.get(taskId)
+        if (originalTask) {
+          dispatch({ type: 'REVERT_OPTIMISTIC', payload: { id: taskId, originalTask } })
+        }
+        showError('Update Failed', response.error || 'Failed to move task to column')
+        return null
+      }
+    } catch (error) {
+      // Revert optimistic update on error
+      const originalTask = state.optimisticUpdates.get(taskId)
+      if (originalTask) {
+        dispatch({ type: 'REVERT_OPTIMISTIC', payload: { id: taskId, originalTask } })
+      }
+      const errorMessage = error instanceof Error ? error.message : 'Failed to move task to column'
+      showError('Update Failed', errorMessage)
+      return null
+    }
+  }, [state.optimisticUpdates, state.tasks, addToHistory, showError])
+
   // Manual optimistic update (for external use)
   const optimisticUpdate = useCallback((id: string, updates: Partial<Task>) => {
     dispatch({ type: 'OPTIMISTIC_UPDATE', payload: { id, updates } })
@@ -490,6 +556,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     updateTaskStatus,
     updateTaskOrder,
     batchUpdateTaskOrders,
+    moveTaskToColumn,
     
     // Optimistic updates
     optimisticUpdate,

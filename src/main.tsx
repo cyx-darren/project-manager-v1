@@ -27,15 +27,15 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
-          <AuthProvider>
-            <ProjectProvider>
+        <AuthProvider>
+          <ProjectProvider>
               <TaskProvider>
-                <SearchProvider>
-                  <RouterProvider router={router} />
-                </SearchProvider>
+            <SearchProvider>
+              <RouterProvider router={router} />
+            </SearchProvider>
               </TaskProvider>
-            </ProjectProvider>
-          </AuthProvider>
+          </ProjectProvider>
+        </AuthProvider>
         </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>

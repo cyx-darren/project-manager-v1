@@ -66,16 +66,16 @@ const Layout: React.FC = () => {
       )}
       
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
         <Header onMenuClick={() => setSidebarOpen(true)} />
         
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-white">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <main className="flex-1 overflow-hidden bg-white">
+          <div className="h-full">
+            <div className="h-full">
               <Breadcrumb />
-              <div className="mt-6">
+              <div className="h-full">
                 <Outlet />
               </div>
             </div>

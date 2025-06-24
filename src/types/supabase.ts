@@ -86,6 +86,44 @@ export type Database = {
         }
         Relationships: []
       }
+      board_columns: {
+        Row: {
+          id: string
+          project_id: string
+          name: string
+          color: string
+          position: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          name: string
+          color?: string
+          position?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          name?: string
+          color?: string
+          position?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_columns_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           content: string
@@ -308,6 +346,7 @@ export type Database = {
         Row: {
           actual_hours: number | null
           assignee_id: string | null
+          column_id: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -325,6 +364,7 @@ export type Database = {
         Insert: {
           actual_hours?: number | null
           assignee_id?: string | null
+          column_id?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -342,6 +382,7 @@ export type Database = {
         Update: {
           actual_hours?: number | null
           assignee_id?: string | null
+          column_id?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -357,6 +398,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "board_columns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_parent_task_id_fkey"
             columns: ["parent_task_id"]
@@ -616,6 +664,10 @@ export type TeamMemberInsert = TablesInsert<'team_members'>
 export type ProjectInvitation = Tables<'project_invitations'>
 export type ProjectInvitationInsert = TablesInsert<'project_invitations'>
 
+export type BoardColumn = Tables<'board_columns'>
+export type BoardColumnInsert = TablesInsert<'board_columns'>
+export type BoardColumnUpdate = TablesUpdate<'board_columns'>
+
 // Enum type aliases
 export type MemberRole = Enums<'member_role'>
 export type TaskStatus = Enums<'task_status'>
@@ -635,6 +687,10 @@ export type TaskWithSubtasks = Task & {
 
 export type ProjectWithTasks = Project & {
   tasks: Task[]
+}
+
+export type ProjectWithColumns = Project & {
+  board_columns: BoardColumn[]
 }
 
 // API Response types

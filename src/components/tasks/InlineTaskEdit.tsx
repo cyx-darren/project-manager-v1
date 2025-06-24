@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Check, X, Edit3 } from 'lucide-react';
-import { taskService } from '../../services/taskService';
+import { useTaskContext } from '../../contexts/TaskContext';
 import type { Task } from '../../types/supabase';
 
 interface InlineTaskEditProps {
@@ -19,6 +19,9 @@ const InlineTaskEdit: React.FC<InlineTaskEditProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // Use TaskContext for optimistic updates
+  const { updateTask } = useTaskContext();
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -61,15 +64,17 @@ const InlineTaskEdit: React.FC<InlineTaskEditProps> = ({
     setError(null);
 
     try {
-      const response = await taskService.updateTask(task.id, {
+      // Use TaskContext's updateTask for optimistic updates
+      const updatedTask = await updateTask(task.id, {
         title: trimmedValue
       });
 
-      if (response.success && response.data) {
-        onTaskUpdated?.(response.data);
+      if (updatedTask) {
+        // Call the callback if provided (for any additional handling)
+        onTaskUpdated?.(updatedTask);
         setIsEditing(false);
       } else {
-        setError(response.error || 'Failed to update task');
+        setError('Failed to update task');
       }
     } catch (error) {
       console.error('Error updating task:', error);

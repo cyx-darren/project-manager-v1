@@ -4,7 +4,7 @@ import type { Task } from '../../types/supabase'
 import { usePermission } from '../../hooks/usePermissions'
 import { AssigneeAvatar } from '../common'
 import { teamService } from '../../services/teamService'
-import { taskService } from '../../services/taskService'
+import { useTaskContext } from '../../contexts/TaskContext'
 import { useToastContext } from '../../contexts/ToastContext'
 import type { AssignableUser } from '../../services/teamService'
 import InlineTaskEdit from './InlineTaskEdit'
@@ -35,6 +35,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const canEditTasks = usePermission('task.edit', { projectId })
   const canDeleteTasks = usePermission('task.delete', { projectId })
   const { showSuccess, showError } = useToastContext()
+  const { deleteTask } = useTaskContext()
   const [assignee, setAssignee] = useState<AssignableUser | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -65,14 +66,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     
     setIsDeleting(true)
     try {
-      const result = await taskService.deleteTask(task.id)
-      if (result.success) {
-        onTaskDeleted?.(task.id)
-        setShowDeleteConfirm(false)
-        showSuccess('Task Deleted', 'Task has been successfully deleted')
-      } else {
-        showError('Delete Failed', result.error || 'Failed to delete task')
-      }
+      await deleteTask(task.id)
+      onTaskDeleted?.(task.id)
+      setShowDeleteConfirm(false)
+      // TaskContext handles success/error toasts automatically
     } catch (error) {
       console.error('Error deleting task:', error)
       showError('Delete Failed', 'An unexpected error occurred while deleting the task')
@@ -164,33 +161,33 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         />
         
         {/* Title */}
-        <div className="flex-1 min-w-0">
-          {canEditTasks && !isDragOverlay && onTaskUpdated ? (
-            <InlineTaskEdit 
-              task={task} 
-              onTaskUpdated={onTaskUpdated}
-            />
-          ) : (
+          <div className="flex-1 min-w-0">
+              {canEditTasks && !isDragOverlay && onTaskUpdated ? (
+                  <InlineTaskEdit 
+                    task={task} 
+                    onTaskUpdated={onTaskUpdated}
+                  />
+              ) : (
             <h3 className="font-semibold text-base text-gray-900 leading-tight">
-              {task.title}
-            </h3>
-          )}
+                  {task.title}
+                </h3>
+              )}
         </div>
         
         {/* Action buttons */}
         {!isDragOverlay && (
           <div className="flex items-center gap-1 flex-shrink-0">
             {canEditTasks && onEditTask && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onEditTask(task)
-                }}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onEditTask(task)
+              }}
                 className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                title="Edit task"
-              >
-                <Edit size={14} />
-              </button>
+              title="Edit task"
+            >
+              <Edit size={14} />
+            </button>
             )}
             {canDeleteTasks && (
               <button
@@ -269,29 +266,33 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white" onClick={(e) => e.stopPropagation()}>
-            <div className="mt-3 text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div 
+            className="relative bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
                 <Trash2 className="h-6 w-6 text-red-600" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mt-2">Delete Task</h3>
-              <div className="mt-2 px-7 py-3">
-                <p className="text-sm text-gray-500">
-                  Are you sure you want to delete this task? This action cannot be undone.
-                </p>
-              </div>
-              <div className="items-center px-4 py-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Task</h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Are you sure you want to delete this task? This action cannot be undone.
+              </p>
+              <div className="flex justify-center gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-24 mr-2 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  className="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteTask}
                   disabled={isDeleting}
-                  className="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-24 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 disabled:opacity-50"
+                  className="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 disabled:opacity-50 transition-colors"
                 >
                   {isDeleting ? 'Deleting...' : 'Delete'}
                 </button>

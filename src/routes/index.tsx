@@ -16,6 +16,8 @@ import TeamManagement from '../pages/TeamManagement';
 import RoleDemo from '../pages/RoleDemo';
 import ApiTester from '../components/dev/ApiTester'
 import PermissionDemo from '../components/dev/PermissionDemo';
+import SchemaValidationTest from '../pages/SchemaValidationTest';
+import CustomKanbanTest from '../pages/CustomKanbanTest';
 
 // Main application routes
 export const router = createBrowserRouter([
@@ -196,6 +198,22 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <PermissionDemo />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'schema-validation-test',
+        element: (
+          <ProtectedRoute>
+            <SchemaValidationTest />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'custom-kanban-test/:projectId',
+        element: (
+          <ProtectedRoute>
+            <CustomKanbanTest />
           </ProtectedRoute>
         )
       }

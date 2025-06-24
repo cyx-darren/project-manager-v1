@@ -9,7 +9,8 @@ import type {
   SubtaskInsert,
   SubtaskUpdate,
   ApiResponse,
-  PaginatedResponse 
+  PaginatedResponse,
+  BoardColumn
 } from '../types/supabase'
 
 // Custom error classes
@@ -55,6 +56,182 @@ export const taskService = {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch tasks'
+      return {
+        data: null,
+        error: message,
+        success: false
+      }
+    }
+  },
+
+  /**
+   * Get tasks by column for the new column-based Kanban board
+   */
+  async getTasksByColumn(projectId: string, columnId: string): Promise<ApiResponse<Task[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('column_id', columnId)
+        .order('order_index', { ascending: true })
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        throw new TaskError(error.message, error.code)
+      }
+
+      return {
+        data: data || [],
+        error: null,
+        success: true
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch tasks by column'
+      return {
+        data: null,
+        error: message,
+        success: false
+      }
+    }
+  },
+
+  /**
+   * Get tasks organized by columns for Kanban board
+   */
+  async getTasksByColumns(projectId: string): Promise<ApiResponse<Record<string, Task[]>>> {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          board_columns!inner(id, name, position)
+        `)
+        .eq('project_id', projectId)
+        .not('column_id', 'is', null)
+        .order('order_index', { ascending: true })
+
+      if (error) {
+        throw new TaskError(error.message, error.code)
+      }
+
+      // Group tasks by column_id
+      const tasksByColumn: Record<string, Task[]> = {}
+      data?.forEach((task: any) => {
+        const columnId = task.column_id
+        if (!tasksByColumn[columnId]) {
+          tasksByColumn[columnId] = []
+        }
+        tasksByColumn[columnId].push(task)
+      })
+
+      return {
+        data: tasksByColumn,
+        error: null,
+        success: true
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch tasks by columns'
+      return {
+        data: null,
+        error: message,
+        success: false
+      }
+    }
+  },
+
+  /**
+   * Move a task to a different column
+   */
+  async moveTaskToColumn(taskId: string, columnId: string, newOrderIndex?: number): Promise<ApiResponse<Task>> {
+    try {
+      const user = await getCurrentUser()
+      if (!user) {
+        throw new TaskPermissionError('Must be authenticated to move tasks')
+      }
+
+      // If no order index provided, put it at the end of the column
+      let orderIndex = newOrderIndex
+      if (orderIndex === undefined) {
+        const { data: columnTasks } = await supabase
+          .from('tasks')
+          .select('order_index')
+          .eq('column_id', columnId)
+          .order('order_index', { ascending: false })
+          .limit(1)
+
+        orderIndex = columnTasks && columnTasks.length > 0 
+          ? (columnTasks[0].order_index || 0) + 1 
+          : 0
+      }
+
+      const { data, error } = await supabase
+        .from('tasks')
+        .update({ 
+          column_id: columnId,
+          order_index: orderIndex,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', taskId)
+        .select()
+        .single()
+
+      if (error) {
+        throw new TaskError(error.message, error.code)
+      }
+
+      return {
+        data,
+        error: null,
+        success: true
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to move task to column'
+      return {
+        data: null,
+        error: message,
+        success: false
+      }
+    }
+  },
+
+  /**
+   * Batch update task positions within columns (for drag and drop reordering)
+   */
+  async batchUpdateTaskPositions(updates: { id: string; column_id: string; order_index: number }[]): Promise<ApiResponse<boolean>> {
+    try {
+      const user = await getCurrentUser()
+      if (!user) {
+        throw new TaskPermissionError('Must be authenticated to reorder tasks')
+      }
+
+      // Perform batch updates
+      const updatePromises = updates.map(({ id, column_id, order_index }) =>
+        supabase
+          .from('tasks')
+          .update({ 
+            column_id,
+            order_index,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id)
+      )
+
+      const results = await Promise.all(updatePromises)
+      
+      // Check for errors
+      const errors = results.filter(result => result.error)
+      if (errors.length > 0) {
+        throw new TaskError('Failed to update some task positions')
+      }
+
+      return {
+        data: true,
+        error: null,
+        success: true
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update task positions'
       return {
         data: null,
         error: message,

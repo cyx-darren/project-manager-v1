@@ -351,7 +351,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     <AlertTriangle className="h-5 w-5 text-red-400" />
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-red-600">{submitError}</p>
+                <p className="text-sm text-red-600">{submitError}</p>
                   </div>
                 </div>
               </div>

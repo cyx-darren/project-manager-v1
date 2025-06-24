@@ -76,31 +76,33 @@ const Breadcrumb: React.FC = () => {
   }
 
   return (
-    <nav className="flex mb-6" aria-label="Breadcrumb">
-      <ol className="flex items-center space-x-2">
-        {breadcrumbs.map((item, index) => (
-          <li key={`${item.name}-${index}`} className="flex items-center">
-            {index > 0 && (
-              <ChevronRightIcon className="h-4 w-4 text-gray-400 mx-2" />
-            )}
-            {item.href ? (
-              <Link
-                to={item.href}
-                className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                {index === 0 && <HomeIcon className="h-4 w-4 mr-1" />}
-                {item.name}
-              </Link>
-            ) : (
-              <span className="flex items-center text-sm font-medium text-gray-900">
-                {index === 0 && <HomeIcon className="h-4 w-4 mr-1" />}
-                {item.name}
-              </span>
-            )}
-          </li>
-        ))}
-      </ol>
-    </nav>
+    <div className="px-6 py-4">
+      <nav className="flex" aria-label="Breadcrumb">
+        <ol className="flex items-center space-x-2">
+          {breadcrumbs.map((item, index) => (
+            <li key={`${item.name}-${index}`} className="flex items-center">
+              {index > 0 && (
+                <ChevronRightIcon className="h-4 w-4 text-gray-400 mx-2" />
+              )}
+              {item.href ? (
+                <Link
+                  to={item.href}
+                  className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {index === 0 && <HomeIcon className="h-4 w-4 mr-1" />}
+                  {item.name}
+                </Link>
+              ) : (
+                <span className="flex items-center text-sm font-medium text-gray-900">
+                  {index === 0 && <HomeIcon className="h-4 w-4 mr-1" />}
+                  {item.name}
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      </nav>
+    </div>
   );
 };
 
