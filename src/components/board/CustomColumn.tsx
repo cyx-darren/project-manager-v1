@@ -18,8 +18,8 @@ interface CustomColumnProps {
   onCreateTask: (columnId: string) => void
   onColumnUpdated: (column: BoardColumn) => void
   onColumnDeleted: (columnId: string) => void
+  canEditTasks: boolean
   canManageColumns: boolean
-  isLoading?: boolean
 }
 
 export const CustomColumn: React.FC<CustomColumnProps> = ({
@@ -32,8 +32,8 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
   onCreateTask,
   onColumnUpdated,
   onColumnDeleted,
-  canManageColumns,
-  isLoading = false
+  canEditTasks,
+  canManageColumns
 }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(column.name)
@@ -41,7 +41,6 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
   const [isDeleting, setIsDeleting] = useState(false)
   const editInputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const taskAreaRef = useRef<HTMLDivElement>(null)
 
   // Sort tasks by order_index for proper display order
   const sortedTasks = useMemo(() => {
@@ -177,17 +176,17 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
       ref={setNodeRef}
       style={columnStyle}
       className={`
-        flex flex-col bg-gray-50 rounded-lg border border-gray-200
+        flex flex-col bg-gray-50 rounded-lg border border-gray-200 h-full
         transition-all duration-200 ease-in-out
         ${isColumnDragging ? 'opacity-50 shadow-2xl scale-105 rotate-1' : 'opacity-100'}
         ${isDraggedOver ? 'ring-2 ring-blue-400 bg-blue-50 shadow-lg scale-[1.02]' : ''}
-        min-w-[320px] max-w-[320px] h-[calc(100vh-200px)]
+        min-w-[320px] max-w-[320px]
       `}
     >
-      {/* Fixed Column Header */}
+      {/* Column Header */}
       <div 
         className={`
-          flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-lg
+          flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-lg flex-shrink-0
           ${isDraggedOver ? 'bg-blue-50' : ''}
         `}
         {...sortableAttributes}
@@ -199,8 +198,6 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
             className="w-3 h-3 rounded-full flex-shrink-0" 
             style={{ backgroundColor: column.color || '#6B7280' }}
           />
-          
-          {/* Column Title - Editable */}
           {isEditing ? (
             <input
               ref={editInputRef}
@@ -215,32 +212,22 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
                   handleEditCancel()
                 }
               }}
-              className="flex-1 font-semibold text-gray-900 bg-transparent border-none outline-none focus:bg-white focus:border focus:border-blue-300 focus:rounded px-1"
-              maxLength={50}
+              className="font-semibold text-gray-900 bg-transparent border-none outline-none focus:ring-0 p-0 min-w-0 flex-1"
             />
           ) : (
-            <h3 
-              className="font-semibold text-gray-900 truncate cursor-pointer hover:text-blue-600"
-              onClick={handleEditStart}
-              title={column.name}
-            >
-              {column.name}
-            </h3>
+            <h3 className="font-semibold text-gray-900 truncate">{column.name}</h3>
           )}
-          
-          {/* Task Count Badge */}
           <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium flex-shrink-0">
             {sortedTasks.length}
           </span>
         </div>
         
-        {/* Column Actions Menu */}
+        {/* Column Actions */}
         {canManageColumns && (
-          <div className="relative" ref={dropdownRef}>
+          <div className="relative flex-shrink-0" ref={dropdownRef}>
             <button
               onClick={() => setShowMenu(!showMenu)}
               className="p-1 hover:bg-gray-100 rounded-md transition-colors"
-              disabled={isDeleting}
             >
               <MoreHorizontal className="h-4 w-4 text-gray-500" />
             </button>
@@ -249,16 +236,15 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
               <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-md shadow-lg border border-gray-200 z-50">
                 <button
                   onClick={handleEditStart}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  disabled={isDeleting}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   <Edit2 className="h-4 w-4" />
                   Edit Column
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   disabled={isDeleting}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
                 >
                   <Trash2 className="h-4 w-4" />
                   {isDeleting ? 'Deleting...' : 'Delete Column'}
@@ -269,83 +255,73 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
         )}
       </div>
 
-      {/* Scrollable Tasks Container */}
-      <div 
-        ref={taskAreaRef}
-        className={`
-          flex-1 overflow-y-auto overflow-x-hidden p-3 scroll-smooth
-          scrollbar-column
-        `}
-        style={{ 
-          maxHeight: 'calc(100vh - 300px)',
-        }}
-      >
-        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          <div 
-            className={`
-              min-h-full space-y-3 relative
-              ${isDraggedOver && isEmpty ? 'border-2 border-dashed border-blue-300 rounded-lg min-h-[200px]' : ''}
-            `}
-          >
-            {/* Enhanced empty state with drop indicator */}
-            {isEmpty && (
-              <div className={`
-                flex flex-col items-center justify-center py-12 text-gray-500 rounded-lg min-h-[200px]
-                transition-all duration-200
-                ${isDraggedOver 
-                  ? 'bg-blue-50 text-blue-600 transform scale-105' 
-                  : 'hover:bg-gray-100'
-                }
-              `}>
-                {isDraggedOver ? (
-                  <div className="text-center animate-pulse">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full mx-auto mb-2 animate-bounce"></div>
-                    <p className="text-sm font-medium">Drop task here</p>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                      <Plus className="h-8 w-8 text-gray-400" />
+      {/* Tasks Container with Proper Scrolling */}
+      <div className="flex-1 min-h-0 p-3">
+        <div className="h-full overflow-y-auto overflow-x-hidden kanban-column-scroll pr-1">
+          <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+            <div 
+              className={`
+                min-h-full space-y-3 relative pb-2
+                ${isDraggedOver && isEmpty ? 'border-2 border-dashed border-blue-300 rounded-lg' : ''}
+              `}
+            >
+              {/* Enhanced empty state with drop indicator */}
+              {isEmpty && (
+                <div className={`
+                  flex flex-col items-center justify-center py-8 text-gray-500 rounded-lg
+                  transition-all duration-200
+                  ${isDraggedOver 
+                    ? 'bg-blue-50 text-blue-600 transform scale-105' 
+                    : 'hover:bg-gray-100'
+                  }
+                `}>
+                  {isDraggedOver ? (
+                    <div className="text-center animate-pulse">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full mx-auto mb-2 animate-bounce"></div>
+                      <p className="text-sm font-medium">Drop task here</p>
                     </div>
-                    <p className="text-sm font-medium">No tasks yet</p>
-                    <p className="text-xs mt-1 text-gray-400">Click + below to add a task</p>
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {/* Tasks with enhanced visual feedback */}
-            {sortedTasks.map((task) => (
-              <DraggableTask
-                key={task.id}
-                task={task}
-                projectId={projectId}
-                onTaskUpdated={onTaskUpdated}
-                onEditTask={onEditTask}
-                onTaskDeleted={onTaskDeleted}
-              />
-            ))}
-            
-            {/* Drop zone indicator when dragging over non-empty column */}
-            {isDraggedOver && !isEmpty && (
-              <div className="absolute inset-0 pointer-events-none">
-                <div className="h-full w-full border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 bg-opacity-50 flex items-center justify-center">
-                  <div className="text-blue-600 text-sm font-medium animate-pulse bg-white px-3 py-1 rounded-full shadow-sm">
-                    Drop to reorder tasks
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-sm">No tasks yet</p>
+                      <p className="text-xs mt-1">Click + to add a task</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Tasks with enhanced visual feedback */}
+              {sortedTasks.map((task) => (
+                <DraggableTask
+                  key={task.id}
+                  task={task}
+                  projectId={projectId}
+                  onTaskUpdated={onTaskUpdated}
+                  onEditTask={onEditTask}
+                  onTaskDeleted={onTaskDeleted}
+                />
+              ))}
+              
+              {/* Drop zone indicator when dragging over non-empty column */}
+              {isDraggedOver && !isEmpty && (
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="h-full w-full border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 bg-opacity-50 flex items-center justify-center">
+                    <div className="text-blue-600 text-sm font-medium animate-pulse">
+                      Drop to reorder tasks
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </SortableContext>
+              )}
+            </div>
+          </SortableContext>
+        </div>
       </div>
 
-      {/* Fixed Add Task Footer */}
-      <div className="flex-shrink-0 p-3 border-t border-gray-200 bg-white rounded-b-lg">
+      {/* Add Task Button */}
+      <div className="flex-shrink-0 p-3 border-t border-gray-200">
         <button
           onClick={() => onCreateTask(column.id)}
-          className="flex items-center gap-2 w-full p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors text-sm font-medium"
-          disabled={isLoading}
+          disabled={!canEditTasks}
+          className="flex items-center gap-2 w-full p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="h-4 w-4" />
           Add task
