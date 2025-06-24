@@ -530,7 +530,7 @@ export const CustomKanbanBoard: React.FC<CustomKanbanBoardProps> = ({
       {/* Board Content */}
       <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-x-auto overflow-y-hidden">
-          <div className="flex gap-6 h-full px-6" style={{ minWidth: `${(columns.length + 1) * 320}px` }}>
+          <div className="flex gap-6 h-full px-6 pb-6" style={{ minWidth: `${(columns.length + 1) * 320}px` }}>
             <DndContext
               sensors={sensors}
               collisionDetection={customCollisionDetection}
@@ -552,6 +552,8 @@ export const CustomKanbanBoard: React.FC<CustomKanbanBoardProps> = ({
                     onCreateTask={handleCreateTask}
                     onColumnUpdated={handleColumnUpdated}
                     onColumnDeleted={handleColumnDeleted}
+                    activeTaskId={activeId as string | null}
+                    overId={overId as string | null}
                     canEditTasks={canEditTasks}
                     canManageColumns={canManageColumns}
                   />

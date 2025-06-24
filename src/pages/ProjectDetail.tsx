@@ -200,7 +200,7 @@ const ProjectDetail: React.FC = () => {
         )
       case 'board':
         return (
-          <div className="flex-1">
+          <div className="flex-1 flex flex-col min-h-0">
             <CustomKanbanBoard 
               project={project}
               onTasksUpdate={handleTasksUpdate}
