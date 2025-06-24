@@ -138,11 +138,25 @@ const DroppableCalendarCell: React.FC<{
     },
   })
 
-  // Calculate visible tasks based on expansion state and responsive breakpoints
-  const maxInitialTasks = isMobile ? 2 : 3
+  // Calculate visible tasks based on expansion state and available space
+  const calculateMaxInitialTasks = () => {
+    // If we have 4 or more tasks, show 2 to leave room for button
+    if (tasks.length >= 4) return isMobile ? 1 : 2
+    // Otherwise show all tasks (up to 3)
+    return Math.min(tasks.length, isMobile ? 2 : 3)
+  }
+
+  const maxInitialTasks = calculateMaxInitialTasks()
   const maxVisibleTasks = isExpanded ? tasks.length : maxInitialTasks
   const visibleTasks = tasks.slice(0, maxVisibleTasks)
   const hasMoreTasks = tasks.length > maxInitialTasks
+
+  // Debug logging to verify task counts
+  const debugDateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  if (tasks.length > 0) {
+    console.log(`Date: ${debugDateStr}, Total tasks: ${tasks.length}, Visible: ${visibleTasks.length}, Max initial: ${maxInitialTasks}, Has more: ${hasMoreTasks}`)
+    console.log(`Is mobile: ${isMobile}, Max initial tasks: ${maxInitialTasks}`)
+  }
 
   const isToday = () => {
     const today = new Date()
@@ -156,10 +170,10 @@ const DroppableCalendarCell: React.FC<{
     'border-r',
     'border-b',
     'p-2',
-    'min-h-[100px]',
     'bg-white',
-    'transition-colors',
+    'transition-all duration-300', // Smooth transition
     'hover:bg-gray-50',
+    isExpanded ? 'h-auto min-h-[120px]' : 'h-[120px]', // Dynamic height
     isToday() ? 'today' : '',
     !isCurrentMonth ? 'other-month' : '',
     isWeekend && showWeekends ? 'weekend bg-gray-50' : '',
@@ -208,7 +222,7 @@ const DroppableCalendarCell: React.FC<{
         )}
       </div>
       
-      <div className={`task-container space-y-1 ${isExpanded ? 'expanded' : ''}`}>
+      <div className={`task-container ${isExpanded ? 'expanded' : ''}`}>
         {visibleTasks.map((task, index) => (
           <DraggableTask
             key={`${task.id}-${index}`}
@@ -220,13 +234,13 @@ const DroppableCalendarCell: React.FC<{
         {/* Show "See More" / "See Less" button when appropriate */}
         {hasMoreTasks && (
           <button
-            className={`see-more-btn ${isExpanded ? 'expanded' : ''}`}
+            className="see-more-btn"
             onClick={handleToggleExpansion}
-            title={isExpanded ? 'Show less tasks' : `Show ${tasks.length - maxVisibleTasks} more tasks`}
+            title={isExpanded ? 'Show less tasks' : `Show ${tasks.length - maxInitialTasks} more tasks`}
           >
             {isExpanded 
               ? 'Show Less' 
-              : `${tasks.length - maxInitialTasks} more`
+              : `+${tasks.length - maxVisibleTasks} more`
             }
           </button>
         )}
@@ -582,15 +596,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const MAX_VISIBLE_MONTHS = 12 // Maximum months to keep in memory
   const INITIAL_MONTHS_TO_LOAD = 6 // Increased from 4
 
-  // State management
-  const [currentDate] = useState(new Date())
-  const [visibleMonths, setVisibleMonths] = useState<VisibleMonth[]>(() => {
+  // Helper function to get initial visible months starting with current month
+  const getInitialVisibleMonths = (): VisibleMonth[] => {
     const today = new Date()
+    const currentYear = today.getFullYear()
+    const currentMonth = today.getMonth()
+    
     const months: VisibleMonth[] = []
     
-    // Add previous month + current + next 4 months (total 6)
-    for (let i = -1; i < 5; i++) {
-      const date = new Date(today.getFullYear(), today.getMonth() + i, 1)
+    // Start with current month and add a few months after
+    // This ensures current month is visible at the top
+    for (let i = 0; i <= 5; i++) {
+      const date = new Date(currentYear, currentMonth + i, 1)
       months.push({
         month: date.getMonth(),
         year: date.getFullYear()
@@ -598,7 +615,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     }
     
     return months
-  })
+  }
+
+  // State management
+  const [currentDate] = useState(new Date())
+  // Initialize with current month in view
+  const [visibleMonths, setVisibleMonths] = useState<VisibleMonth[]>(getInitialVisibleMonths())
 
   // Simplified loading state management - single direction state
   const [loadingDirection, setLoadingDirection] = useState<'top' | 'bottom' | null>(null)
@@ -702,6 +724,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  // Ensure proper initial positioning - start at top
+  useEffect(() => {
+    if (calendarContainerRef.current) {
+      // Reset scroll to top when calendar loads
+      calendarContainerRef.current.scrollTop = 0
+    }
+  }, []) // Run once on mount
+
   // Enhanced scroll handling for bidirectional infinite scroll
   const handleScroll = useCallback(() => {
     const container = calendarContainerRef.current
@@ -798,7 +828,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         let mostVisibleEntry: IntersectionObserverEntry | null = null
         let maxRatio = 0
 
-        entries.forEach((entry) => {
+        entries.forEach((entry: IntersectionObserverEntry) => {
           if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
             maxRatio = entry.intersectionRatio
             mostVisibleEntry = entry
