@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -11,7 +11,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { Plus } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Filter } from 'lucide-react'
 import type { Project, Task } from '../../types/supabase'
 import "./calendar-responsive.css";
 import { getTaskStatusCounts } from "../../utils/calendarUtils";
@@ -122,47 +122,6 @@ const DroppableCalendarCell: React.FC<{
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
-
-  // Sync row heights when tasks or expansion state changes
-  useEffect(() => {
-    const syncRowHeights = () => {
-      // Find all calendar grids on the page
-      const calendarGrids = document.querySelectorAll('.calendar-grid')
-      
-      calendarGrids.forEach(grid => {
-        const cells = Array.from(grid.querySelectorAll('.calendar-cell'))
-        const columns = showWeekends ? 7 : 5
-        
-        // Group cells into rows
-        for (let i = 0; i < cells.length; i += columns) {
-          const rowCells = cells.slice(i, i + columns)
-          let maxHeight = 0
-          
-          // Reset heights and find the tallest cell in the row
-          rowCells.forEach(cell => {
-            (cell as HTMLElement).style.height = 'auto'
-            maxHeight = Math.max(maxHeight, (cell as HTMLElement).offsetHeight)
-          })
-          
-          // Set all cells in the row to the same height
-          rowCells.forEach(cell => {
-            (cell as HTMLElement).style.height = `${maxHeight}px`
-          })
-        }
-      })
-    }
-    
-    // Use a small delay to ensure DOM has updated after expansion
-    const timeoutId = setTimeout(syncRowHeights, 10)
-    
-    // Also sync on window resize
-    window.addEventListener('resize', syncRowHeights)
-    
-    return () => {
-      clearTimeout(timeoutId)
-      window.removeEventListener('resize', syncRowHeights)
-    }
-  }, [tasks, isExpanded, showWeekends])
   
   // Create consistent date string format (YYYY-MM-DD) without timezone issues
   const year = date.getFullYear()
@@ -235,7 +194,18 @@ const DroppableCalendarCell: React.FC<{
             ? 'text-gray-900 font-medium' 
             : 'text-gray-400'
       }`}>
-        {date.getDate()}
+        {date.getDate() === 1 ? (
+          <div className="flex flex-col items-start">
+            <span className="text-xs font-normal text-gray-500">
+              {date.toLocaleDateString('en-US', { month: 'short' })}
+            </span>
+            <span className={`font-semibold ${isToday() ? '' : 'text-gray-900'}`}>
+              {date.getDate()}
+            </span>
+          </div>
+        ) : (
+          date.getDate()
+        )}
       </div>
       
       <div className={`task-container space-y-1 ${isExpanded ? 'expanded' : ''}`}>
@@ -250,13 +220,13 @@ const DroppableCalendarCell: React.FC<{
         {/* Show "See More" / "See Less" button when appropriate */}
         {hasMoreTasks && (
           <button
-            className="see-more-btn"
+            className={`see-more-btn ${isExpanded ? 'expanded' : ''}`}
             onClick={handleToggleExpansion}
             title={isExpanded ? 'Show less tasks' : `Show ${tasks.length - maxVisibleTasks} more tasks`}
           >
             {isExpanded 
-              ? 'See Less' 
-              : `See More (+${tasks.length - maxInitialTasks})`
+              ? 'Show Less' 
+              : `${tasks.length - maxInitialTasks} more`
             }
           </button>
         )}
@@ -394,36 +364,86 @@ const CalendarMonth: React.FC<{
   year: number
   tasks: CalendarTask[]
   showWeekends: boolean
+  isFirst?: boolean
   onTaskClick?: (task: Task) => void
   onDateClick?: (date: Date) => void
-}> = ({ month, year, tasks, showWeekends, onTaskClick, onDateClick }) => {
-  const days = getCalendarDays(month, year)
+}> = ({ month, year, tasks, showWeekends, isFirst = false, onTaskClick, onDateClick }) => {
+
+  // Height synchronization removed - now using fixed CSS heights for consistency
   
-  // Generate proper calendar days (42 days to ensure full month coverage)
-  const generateCalendarDays = (year: number, month: number): Date[] => {
+  // Fixed generateCalendarDays to prevent duplicate rows at month transitions
+  const generateCalendarDays = (year: number, month: number, isFirst: boolean = false, previousMonthEndsOn?: number): Date[] => {
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
-    const startDate = new Date(firstDay)
     const calendarDays: Date[] = []
     
-    // Start from Sunday of the week containing the 1st
-    startDate.setDate(startDate.getDate() - startDate.getDay())
-    
-    // Generate 42 days (6 weeks) to ensure full month coverage
-    for (let i = 0; i < 42; i++) {
-      calendarDays.push(new Date(startDate))
-      startDate.setDate(startDate.getDate() + 1)
+    if (isFirst) {
+      // First month: show complete weeks
+      const startDate = new Date(firstDay)
+      startDate.setDate(startDate.getDate() - startDate.getDay())
+      
+      let currentDate = new Date(startDate)
+      while (currentDate <= lastDay || currentDate.getDay() !== 0) {
+        calendarDays.push(new Date(currentDate))
+        currentDate.setDate(currentDate.getDate() + 1)
+      }
+    } else {
+      // For subsequent months, check if we need to start from Sunday or from the 1st
+      const firstDayOfWeek = firstDay.getDay()
+      
+      // If the previous month ended on Saturday (day 6), start from the 1st
+      // Otherwise, we already showed this week in the previous month
+      if (previousMonthEndsOn === 6 || firstDayOfWeek === 0) {
+        // Start from the 1st of the month
+        let currentDate = new Date(firstDay)
+        while (currentDate <= lastDay) {
+          calendarDays.push(new Date(currentDate))
+          currentDate.setDate(currentDate.getDate() + 1)
+        }
+        
+        // Add trailing days to complete the week
+        const lastDayOfWeek = lastDay.getDay()
+        if (lastDayOfWeek < 6) {
+          let trailingDate = new Date(lastDay)
+          trailingDate.setDate(trailingDate.getDate() + 1)
+          while (trailingDate.getDay() !== 0) {
+            calendarDays.push(new Date(trailingDate))
+            trailingDate.setDate(trailingDate.getDate() + 1)
+          }
+        }
+      } else {
+        // Skip the first week as it was already shown in the previous month
+        // Start from the first Sunday that comes after the 1st of the month
+        let currentDate = new Date(year, month, 1)
+        
+        // Find the first Sunday that's after the start of the month
+        while (currentDate.getDay() !== 0) {
+          currentDate.setDate(currentDate.getDate() + 1)
+        }
+        
+        // Now generate days from this Sunday onwards
+        while (currentDate <= lastDay || currentDate.getDay() !== 0) {
+          calendarDays.push(new Date(currentDate))
+          currentDate.setDate(currentDate.getDate() + 1)
+        }
+      }
     }
     
     return calendarDays
   }
 
-  const calendarDays = generateCalendarDays(year, month)
+  // Calculate previous month's last day for non-first months
+  const previousMonthEndsOn = isFirst ? undefined : new Date(year, month, 0).getDay()
   
-  // Filter days based on showWeekends setting
-  const filteredDays = showWeekends 
-    ? calendarDays 
-    : calendarDays.filter(day => day.getDay() !== 0 && day.getDay() !== 6)
+  // Generate calendar days based on position
+  const calendarDays = generateCalendarDays(year, month, isFirst, previousMonthEndsOn)
+  
+  // Create day grid that maintains proper alignment even when hiding weekends
+  const dayGrid = calendarDays.map(day => ({
+    date: day,
+    isVisible: showWeekends || (day.getDay() !== 0 && day.getDay() !== 6),
+    isWeekend: day.getDay() === 0 || day.getDay() === 6
+  }))
 
   const getTasksForDate = (date: Date): CalendarTask[] => {
     // Create consistent date string format (YYYY-MM-DD) without timezone issues
@@ -467,39 +487,39 @@ const CalendarMonth: React.FC<{
 
   return (
     <div className="calendar-container">
-      {/* Calendar header with day names */}
-      <div className={`calendar-header grid ${showWeekends ? 'grid-cols-7' : 'grid-cols-5'} text-center font-semibold bg-gray-50 border-b-2 border-gray-200`}>
-        {showWeekends ? (
-          <>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Sun</div>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Mon</div>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Tue</div>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Wed</div>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Thu</div>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Fri</div>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Sat</div>
-          </>
-        ) : (
-          <>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Mon</div>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Tue</div>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Wed</div>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Thu</div>
-            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Fri</div>
-          </>
-        )}
-      </div>
+      {/* Calendar header with day names - only show for first month */}
+      {isFirst && (
+        <div className="calendar-header grid grid-cols-7 text-center font-semibold bg-gray-50 border-b-2 border-gray-200">
+          <div className={`py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide ${!showWeekends ? 'opacity-0 pointer-events-none' : ''}`}>Sun</div>
+          <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Mon</div>
+          <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Tue</div>
+          <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Wed</div>
+          <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Thu</div>
+          <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Fri</div>
+          <div className={`py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide ${!showWeekends ? 'opacity-0 pointer-events-none' : ''}`}>Sat</div>
+        </div>
+      )}
       
       {/* Calendar grid */}
-      <div className={`calendar-grid grid ${showWeekends ? 'grid-cols-7' : 'grid-cols-5'} border-l border-t`}>
-        {filteredDays.map((date, index) => {
-          const dayTasks = getTasksForDate(date)
+      <div className={`calendar-grid grid grid-cols-7 border-l border-t`}>
+        {dayGrid.map((dayInfo, index) => {
+          if (!dayInfo.isVisible) {
+            // Render hidden cell to maintain grid structure
+            return (
+              <div 
+                key={`hidden-${dayInfo.date.getFullYear()}-${dayInfo.date.getMonth()}-${dayInfo.date.getDate()}`}
+                className="calendar-cell border-r border-b p-2 min-h-[100px] bg-gray-100 opacity-0 pointer-events-none"
+              />
+            )
+          }
+          
+          const dayTasks = getTasksForDate(dayInfo.date)
           return (
             <DroppableCalendarCell
-              key={`${date.getTime()}-${index}`}
-              date={date}
+              key={`${dayInfo.date.getFullYear()}-${dayInfo.date.getMonth()}-${dayInfo.date.getDate()}`}
+              date={dayInfo.date}
               tasks={dayTasks}
-              isCurrentMonth={isCurrentMonth(date)}
+              isCurrentMonth={isCurrentMonth(dayInfo.date)}
               showWeekends={showWeekends}
               onTaskClick={onTaskClick}
               onDateClick={onDateClick}
@@ -517,11 +537,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   onTaskClick,
   onDateClick
 }) => {
-  const [isMobile, setIsMobile] = useState(false)
+  const [draggedTask, setDraggedTask] = useState<CalendarTask | null>(null)
   const [showWeekends, setShowWeekends] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
   const [currentView, setCurrentView] = useState<'month' | 'week' | 'day' | 'agenda'>('month')
   const [isLoading, setIsLoading] = useState(false)
-  const [draggedTask, setDraggedTask] = useState<CalendarTask | null>(null)
+  const [isLoadingTop, setIsLoadingTop] = useState(false)
+  const [isLoadingBottom, setIsLoadingBottom] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState<CalendarFilters>({
     status: [],
@@ -532,17 +554,55 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   const { showSuccess, showError } = useToastContext()
   const { updateTask } = useTaskContext()
+  
+  // Refs
+  const calendarContainerRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
 
-  // Initialize with current month and next month
-  const currentDate = new Date()
-  const [visibleMonths, setVisibleMonths] = useState<VisibleMonth[]>([
-    { month: currentDate.getMonth(), year: currentDate.getFullYear() },
-    { 
-      month: currentDate.getMonth() === 11 ? 0 : currentDate.getMonth() + 1, 
-      year: currentDate.getMonth() === 11 ? currentDate.getFullYear() + 1 : currentDate.getFullYear() 
+  // Dynamic header height calculation
+  const [headerHeight, setHeaderHeight] = useState(200) // Default fallback
+  
+  // State to track current visible month for header display
+  const [currentVisibleMonth, setCurrentVisibleMonth] = useState({ 
+    month: new Date().getMonth(), 
+    year: new Date().getFullYear() 
+  })
+
+  // Measure header height on mount and when filters toggle
+  useEffect(() => {
+    if (headerRef.current) {
+      const height = headerRef.current.offsetHeight
+      setHeaderHeight(height + 20) // Add small buffer
     }
-  ])
+  }, [showFilters]) // Recalculate when filters toggle
 
+  // Constants for infinite scroll - INCREASED for better reliability
+  const SCROLL_THRESHOLD = 300 // Increased from 100px for more reliable triggering
+  const LOADING_DELAY = 200 // Faster response
+  const MAX_VISIBLE_MONTHS = 12 // Maximum months to keep in memory
+  const INITIAL_MONTHS_TO_LOAD = 6 // Increased from 4
+
+  // State management
+  const [currentDate] = useState(new Date())
+  const [visibleMonths, setVisibleMonths] = useState<VisibleMonth[]>(() => {
+    const today = new Date()
+    const months: VisibleMonth[] = []
+    
+    // Add previous month + current + next 4 months (total 6)
+    for (let i = -1; i < 5; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() + i, 1)
+      months.push({
+        month: date.getMonth(),
+        year: date.getFullYear()
+      })
+    }
+    
+    return months
+  })
+
+  // Simplified loading state management - single direction state
+  const [loadingDirection, setLoadingDirection] = useState<'top' | 'bottom' | null>(null)
+  
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -642,33 +702,162 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  // Infinite scroll handler
+  // Enhanced scroll handling for bidirectional infinite scroll
   const handleScroll = useCallback(() => {
-    const scrollPosition = window.scrollY + window.innerHeight
-    const documentHeight = document.documentElement.scrollHeight
-    
-    // Load next month when near bottom
-    if (scrollPosition > documentHeight - 500 && !isLoading) {
-      setIsLoading(true)
+    const container = calendarContainerRef.current
+    if (!container || loadingDirection) return
+
+    const { scrollTop, scrollHeight, clientHeight } = container
+    const scrollPosition = scrollTop
+    const bottomPosition = scrollHeight - clientHeight - scrollTop
+
+    // Check if we're near the top (need to load previous months)
+    if (scrollPosition < SCROLL_THRESHOLD) {
+      setLoadingDirection('top')
       
       setTimeout(() => {
+        const newMonths: VisibleMonth[] = []
+        const firstMonth = visibleMonths[0]
+        
+        // Add 2 previous months
+        for (let i = 2; i >= 1; i--) {
+          const date = new Date(firstMonth.year, firstMonth.month - i, 1)
+          newMonths.push({
+            month: date.getMonth(),
+            year: date.getFullYear()
+          })
+        }
+        
+        // Store current scroll position for preservation
+        const previousScrollTop = container.scrollTop
+        const previousScrollHeight = container.scrollHeight
+        
         setVisibleMonths(prev => {
-          const lastMonth = prev[prev.length - 1]
-          const nextMonth = lastMonth.month === 11 
-            ? { month: 0, year: lastMonth.year + 1 }
-            : { month: lastMonth.month + 1, year: lastMonth.year }
-          
-          return [...prev, nextMonth]
+          const updated = [...newMonths, ...prev]
+          // Limit total months to prevent memory issues
+          return updated.slice(0, MAX_VISIBLE_MONTHS)
         })
-        setIsLoading(false)
-      }, 300) // Simulate loading delay
+        
+        // Preserve scroll position after state update
+        requestAnimationFrame(() => {
+          const newScrollHeight = container.scrollHeight
+          const scrollDiff = newScrollHeight - previousScrollHeight
+          container.scrollTop = previousScrollTop + scrollDiff
+          setLoadingDirection(null)
+        })
+      }, LOADING_DELAY)
     }
-  }, [isLoading])
+    // Check if we're near the bottom (need to load next months)
+    else if (bottomPosition < SCROLL_THRESHOLD) {
+      setLoadingDirection('bottom')
+      
+      setTimeout(() => {
+        const lastMonth = visibleMonths[visibleMonths.length - 1]
+        const newMonths: VisibleMonth[] = []
+        
+        // Add 2 next months
+        for (let i = 1; i <= 2; i++) {
+          const date = new Date(lastMonth.year, lastMonth.month + i, 1)
+          newMonths.push({
+            month: date.getMonth(),
+            year: date.getFullYear()
+          })
+        }
+        
+        setVisibleMonths(prev => {
+          const updated = [...prev, ...newMonths]
+          // Limit total months to prevent memory issues
+          return updated.slice(-MAX_VISIBLE_MONTHS)
+        })
+        
+        setLoadingDirection(null)
+      }, LOADING_DELAY)
+    }
+  }, [loadingDirection, visibleMonths])
 
+  // Fixed scroll event listener - attach to calendar container
   useEffect(() => {
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
+    const container = calendarContainerRef.current
+    if (!container) return
+
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll)
+    }
   }, [handleScroll])
+
+    // Intersection Observer to detect which month is currently in view
+  useEffect(() => {
+    const container = calendarContainerRef.current
+    if (!container) return
+
+    const observer = new IntersectionObserver(
+      (entries: IntersectionObserverEntry[]) => {
+        // Find the most visible month section
+        let mostVisibleEntry: IntersectionObserverEntry | null = null
+        let maxRatio = 0
+
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+            maxRatio = entry.intersectionRatio
+            mostVisibleEntry = entry
+          }
+        })
+
+        // Update current visible month based on the most visible section
+        if (mostVisibleEntry && mostVisibleEntry.target instanceof HTMLElement) {
+          const element = mostVisibleEntry.target
+          const monthData = element.getAttribute('data-month')
+          if (monthData) {
+            const [year, month] = monthData.split('-').map(Number)
+            setCurrentVisibleMonth({ month, year })
+          }
+        }
+      },
+      {
+        root: container,
+        rootMargin: '-20% 0px -60% 0px', // Focus on center portion of viewport
+        threshold: [0, 0.25, 0.5, 0.75, 1] // Multiple thresholds for better detection
+      }
+    )
+
+    // Observe all month sections
+    const monthSections = container.querySelectorAll('.month-section')
+    monthSections.forEach(section => {
+      observer.observe(section)
+    })
+
+    return () => observer.disconnect()
+  }, [visibleMonths])
+
+  // Maintain scroll position when adding content at the top
+  useEffect(() => {
+    // Scroll position preservation is now handled directly in the scroll handler
+    // when loading direction is 'top'
+  }, [visibleMonths])
+
+  // Ensure container is scrollable and force initial scroll position
+  useEffect(() => {
+    const container = calendarContainerRef.current
+    if (container) {
+      const isScrollable = container.scrollHeight > container.clientHeight
+      
+      // Force initial scroll position to enable top loading
+      if (isScrollable && container.scrollTop === 0) {
+        container.scrollTop = 10
+      }
+    }
+  }, [visibleMonths])
+
+  // Performance optimization: Clean up months when too many are loaded
+  useEffect(() => {
+    if (visibleMonths.length > MAX_VISIBLE_MONTHS) {
+      // Keep middle months, remove oldest/newest
+      setVisibleMonths(prev => prev.slice(2, -2))
+      console.log('🧹 Cleaned up months, new count:', visibleMonths.length - 4)
+    }
+  }, [visibleMonths.length])
 
   // Filter tasks based on current filters
   const filteredTasks = useMemo(() => {
@@ -752,14 +941,32 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   const navigateToToday = () => {
     const today = new Date()
-    setVisibleMonths([
-      { month: today.getMonth(), year: today.getFullYear() },
-      { 
-        month: today.getMonth() === 11 ? 0 : today.getMonth() + 1, 
-        year: today.getMonth() === 11 ? today.getFullYear() + 1 : today.getFullYear() 
+    const months: VisibleMonth[] = []
+    
+    // Reset to current month plus next 3 months
+    for (let i = 0; i < 4; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() + i, 1)
+      months.push({
+        month: date.getMonth(),
+        year: date.getFullYear()
+      })
+    }
+    
+    setVisibleMonths(months)
+    setLoadingDirection(null)
+    
+    // Update current visible month to today's month
+    setCurrentVisibleMonth({
+      month: today.getMonth(),
+      year: today.getFullYear()
+    })
+    
+    // Scroll to top of calendar
+    setTimeout(() => {
+      if (calendarContainerRef.current) {
+        calendarContainerRef.current.scrollTop = 0
       }
-    ])
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    }, 100)
   }
 
   const navigatePrevious = () => {
@@ -769,8 +976,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         ? { month: 11, year: firstMonth.year - 1 }
         : { month: firstMonth.month - 1, year: firstMonth.year }
       
-      return [prevMonth, ...prev.slice(0, -1)]
+      return [prevMonth, ...prev.slice(0, 2)] // Keep only first 3 months for navigation
     })
+    
+    // Scroll to show the new first month
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const navigateNext = () => {
@@ -780,8 +990,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         ? { month: 0, year: lastMonth.year + 1 }
         : { month: lastMonth.month + 1, year: lastMonth.year }
       
-      return [...prev.slice(1), nextMonth]
+      return [...prev.slice(-2), nextMonth] // Keep only last 3 months for navigation
     })
+    
+    // Scroll to show the new content
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+    }, 100)
   }
 
   // Mobile view
@@ -790,318 +1005,164 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="calendar-view">
-        {/* Calendar Header */}
-        <div className="calendar-header flex items-center justify-between mb-4 pb-4 border-b">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-semibold">
-              {visibleMonths[0] && new Date(visibleMonths[0].year, visibleMonths[0].month).toLocaleDateString('en-US', { 
-                month: 'long', 
-                year: 'numeric' 
-              })}
-            </h2>
-            <div className="flex gap-2">
-              <button 
-                className="px-3 py-1 text-sm border rounded hover:bg-gray-50"
-                onClick={navigateToToday}
+    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="calendar-view h-full flex flex-col">
+        {/* Fixed Calendar Header */}
+        <div 
+          ref={headerRef}
+          className="calendar-header-fixed bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0"
+        >
+          {/* Calendar Navigation */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {new Date(currentVisibleMonth.year, currentVisibleMonth.month).toLocaleDateString('en-US', { 
+                  month: 'long', 
+                  year: 'numeric' 
+                })}
+              </h2>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={navigateToToday}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={navigatePrevious}
+                  className="p-1 hover:bg-gray-100 rounded transition-colors"
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={navigateNext}
+                  className="p-1 hover:bg-gray-100 rounded transition-colors"
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 px-3 py-1 text-sm border rounded hover:bg-gray-50 transition-colors"
               >
-                Today
-              </button>
-              <button 
-                className="px-2 py-1 hover:bg-gray-50 rounded"
-                onClick={navigatePrevious}
-              >
-                ←
-              </button>
-              <button 
-                className="px-2 py-1 hover:bg-gray-50 rounded"
-                onClick={navigateNext}
-              >
-                →
+                <Filter className="w-4 h-4" />
+                Filters
               </button>
             </div>
           </div>
+
+          {/* View Tabs */}
+          <div className="flex border-b">
+            {(['month', 'week', 'day', 'agenda'] as const).map((view) => (
+              <button
+                key={view}
+                onClick={() => setCurrentView(view)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
+                  currentView === view
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {view}
+              </button>
+            ))}
+          </div>
+
+          {/* Filters Panel */}
+          {showFilters && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={showWeekends}
+                    onChange={(e) => setShowWeekends(e.target.checked)}
+                    className="rounded"
+                  />
+                  Show Weekends
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Scrollable Calendar Container with Dynamic Height */}
+        <div 
+          className="calendar-container overflow-y-auto overflow-x-hidden border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 relative bg-white" 
+          ref={calendarContainerRef}
+          tabIndex={0}
+          style={{ 
+            height: headerHeight > 0 ? `calc(100vh - ${headerHeight + 120}px)` : 'calc(100vh - 320px)', // Increased buffer for scrolling
+            minHeight: '500px', // Increased minimum height
+            maxHeight: '700px' // Add maximum height to ensure scrolling
+          }}
+        >
+          {/* Loading indicator for top */}
+          {loadingDirection === 'top' && (
+            <div className="absolute top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b p-3 flex items-center justify-center">
+              <div className="flex items-center space-x-2 text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                <span className="text-sm font-medium">Loading previous months...</span>
+              </div>
+            </div>
+          )}
           
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input 
-                type="checkbox" 
-                checked={showWeekends}
-                onChange={(e) => setShowWeekends(e.target.checked)}
-              />
-              Show weekends
-            </label>
-            
-            <button 
-              className="px-3 py-1 text-sm border rounded hover:bg-gray-50 flex items-center gap-2"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              🔍 Filters
-              {(filters.status.length > 0 || filters.priority.length > 0 || filters.assignee.length > 0 || !filters.showCompleted) && (
-                <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5">
-                  {filters.status.length + filters.priority.length + filters.assignee.length + (!filters.showCompleted ? 1 : 0)}
-                </span>
-              )}
-            </button>
-            
-            <div className="flex border rounded">
-              <button 
-                className={`px-3 py-1 text-sm ${currentView === 'month' ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
-                onClick={() => setCurrentView('month')}
-              >
-                Month
-              </button>
-              <button 
-                className={`px-3 py-1 text-sm ${currentView === 'week' ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
-                onClick={() => setCurrentView('week')}
-              >
-                Week
-              </button>
-              <button 
-                className={`px-3 py-1 text-sm ${currentView === 'day' ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
-                onClick={() => setCurrentView('day')}
-              >
-                Day
-              </button>
-              <button 
-                className={`px-3 py-1 text-sm ${currentView === 'agenda' ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
-                onClick={() => setCurrentView('agenda')}
-              >
-                Agenda
-              </button>
+          {/* Scroll hint at top */}
+          {loadingDirection !== 'top' && (
+            <div className="sticky top-0 z-5 bg-gradient-to-b from-gray-50 to-transparent h-6 flex items-start justify-center pt-1">
+              <div className="text-xs text-gray-400 flex items-center gap-1">
+                <ChevronUp className="w-3 h-3" />
+                Scroll up for previous months
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Filters Panel */}
-        {showFilters && (
-          <div className="filters-panel bg-gray-50 border rounded-lg p-4 mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-gray-900">Filters</h3>
-              <button 
-                className="text-sm text-blue-600 hover:text-blue-800"
-                onClick={clearAllFilters}
-              >
-                Clear All
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Status Filter */}
-              {filterOptions.statuses.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Status</h4>
-                  <div className="space-y-1">
-                    {filterOptions.statuses.map(status => (
-                      <label key={status} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={filters.status.includes(status)}
-                          onChange={() => toggleStatusFilter(status)}
-                          className="rounded"
-                        />
-                        <span className="capitalize">{status.replace('_', ' ')}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Priority Filter */}
-              {filterOptions.priorities.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Priority</h4>
-                  <div className="space-y-1">
-                    {filterOptions.priorities.map(priority => (
-                      <label key={priority} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={filters.priority.includes(priority)}
-                          onChange={() => togglePriorityFilter(priority)}
-                          className="rounded"
-                        />
-                        <span className="capitalize flex items-center gap-1">
-                          {priority === 'urgent' && '🔴'}
-                          {priority === 'high' && '🟡'}
-                          {priority === 'medium' && '🔵'}
-                          {priority === 'low' && '⚪'}
-                          {priority}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Assignee Filter */}
-              {filterOptions.assignees.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Assignee</h4>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {filterOptions.assignees.map(assignee => (
-                      <label key={assignee} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={filters.assignee.includes(assignee)}
-                          onChange={() => toggleAssigneeFilter(assignee)}
-                          className="rounded"
-                        />
-                        <span>{assignee}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Additional Options */}
-            <div className="mt-4 pt-3 border-t border-gray-200">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={filters.showCompleted}
-                  onChange={(e) => setFilters(prev => ({ ...prev, showCompleted: e.target.checked }))}
-                  className="rounded"
-                />
-                Show completed tasks
-              </label>
-            </div>
-          </div>
-        )}
-
-        {/* Task Count Summary */}
-        <div className="flex items-center gap-4 mb-4 text-sm">
-          {statusCounts.todo > 0 && (
-            <span className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-              {statusCounts.todo} To Do
-            </span>
           )}
-          {statusCounts.in_progress > 0 && (
-            <span className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
-              {statusCounts.in_progress} In Progress
-            </span>
-          )}
-          {statusCounts.done > 0 && (
-            <span className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-              {statusCounts.done} Done
-            </span>
-          )}
-        </div>
 
-        {/* Calendar Container with View-based Content */}
-        <div className="calendar-container">
+          {/* Calendar Content */}
           {currentView === 'month' && (
             <>
-              {visibleMonths.map(({ month, year }) => (
-                <div key={`${year}-${month}`} className="month-section mb-8">
-                  <h3 className="text-lg font-semibold mb-4">
-                    {new Date(year, month).toLocaleDateString('en-US', { 
-                      month: 'long', 
-                      year: 'numeric' 
-                    })}
-                  </h3>
+              {/* Render all visible months */}
+              {visibleMonths.map(({ month, year }, index) => (
+                <div 
+                  key={`${year}-${month}`} 
+                  className="month-section"
+                  data-month={`${year}-${month}`}
+                >
                   <CalendarMonth 
                     month={month} 
-                    year={year}
+                    year={year} 
                     tasks={getTasksForMonth(filteredTasks, month, year)}
                     showWeekends={showWeekends}
+                    isFirst={index === 0}
                     onTaskClick={onTaskClick}
                     onDateClick={onDateClick}
                   />
                 </div>
               ))}
-              
-              {/* Loading indicator */}
-              {isLoading && (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                </div>
-              )}
             </>
           )}
-
-          {currentView === 'week' && (
-            <div className="week-view">
-              <div className="text-center text-gray-500 py-8">
-                <p>Week view is coming soon!</p>
-                <p className="text-sm mt-2">For now, please use Month view to see your tasks.</p>
+          
+          {/* Loading indicator for bottom */}
+          {loadingDirection === 'bottom' && (
+            <div className="absolute bottom-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-t p-3 flex items-center justify-center">
+              <div className="flex items-center space-x-2 text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                <span className="text-sm font-medium">Loading next months...</span>
               </div>
             </div>
           )}
-
-          {currentView === 'day' && (
-            <div className="day-view">
-              <div className="text-center text-gray-500 py-8">
-                <p>Day view is coming soon!</p>
-                <p className="text-sm mt-2">For now, please use Month view to see your tasks.</p>
-              </div>
-            </div>
-          )}
-
-          {currentView === 'agenda' && (
-            <div className="agenda-view">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Upcoming Tasks</h3>
-                {filteredTasks
-                  .filter(task => task.due_date)
-                  .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
-                  .map(task => (
-                    <div 
-                      key={task.id} 
-                      className="agenda-item bg-white border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => onTaskClick?.(task)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium text-gray-900">{task.title}</h4>
-                          {task.description && (
-                            <p className="text-sm text-gray-600 mt-1">{task.description}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm text-gray-500">
-                            {new Date(task.due_date!).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              task.priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                              task.priority === 'high' ? 'bg-yellow-100 text-yellow-800' :
-                              task.priority === 'medium' ? 'bg-blue-100 text-blue-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {task.priority || 'medium'}
-                            </span>
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              task.status === 'done' ? 'bg-green-100 text-green-800' :
-                              task.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {task.status?.replace('_', ' ') || 'todo'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                }
-                {filteredTasks.filter(task => task.due_date).length === 0 && (
-                  <div className="text-center text-gray-500 py-8">
-                    <p>No upcoming tasks with due dates.</p>
-                  </div>
-                )}
+          
+          {/* Scroll hint at bottom */}
+          {loadingDirection !== 'bottom' && (
+            <div className="sticky bottom-0 z-5 bg-gradient-to-t from-gray-50 to-transparent h-6 flex items-end justify-center pb-1">
+              <div className="text-xs text-gray-400 flex items-center gap-1">
+                <ChevronDown className="w-3 h-3" />
+                Scroll down for more months
               </div>
             </div>
           )}

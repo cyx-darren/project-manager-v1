@@ -1,12 +1,12 @@
 /* Asana-style Calendar with Subtle Borders */
 
-/* Calendar Grid - Updated for CSS Grid Layout with Equal Row Heights */
+/* Calendar Grid - Updated for Equal Row Heights */
 .calendar-grid {
   display: grid;
   width: 100%;
   border: 1px solid #e5e7eb;
-  grid-auto-rows: 1fr; /* Ensure all rows have equal height */
-  align-items: stretch; /* Stretch all cells to fill the row height */
+  grid-auto-rows: 120px; /* Fixed row height for consistency */
+  align-items: stretch; /* Stretch all cells to row height */
 }
 
 /* Grid columns for weekends shown/hidden */
@@ -18,11 +18,11 @@
   grid-template-columns: repeat(5, 1fr);
 }
 
-/* Calendar cells with light gray borders */
+/* Calendar cells with light gray borders and consistent heights */
 .calendar-cell {
   border: 1px solid #e5e7eb; /* Light gray border */
-  min-height: 100px;
-  height: 100%; /* Fill the entire grid cell height */
+  min-height: 120px; /* Consistent minimum height */
+  height: 120px; /* Fixed height for consistency */
   padding: 8px;
   background: white;
   transition: background-color 0.2s ease;
@@ -30,7 +30,7 @@
   display: flex;
   flex-direction: column;
   overflow: visible; /* Allow content to expand */
-  /* Removed align-self: start to allow stretching */
+  align-self: stretch; /* Stretch to match row height */
 }
 
 /* Remove duplicate borders */
@@ -55,10 +55,10 @@
   background-color: #f9fafb !important;
 }
 
-/* Weekend cells with subtle gray background */
+/* Weekend cells with subtle gray background - fills entire cell height */
 .calendar-cell.weekend {
   background-color: #f9fafb;
-  height: 100%; /* Ensure weekend shading fills entire cell */
+  height: 120px; /* Ensure weekend shading fills entire cell */
 }
 
 /* Date numbers */
@@ -68,6 +68,7 @@
   font-weight: 400;
   margin-bottom: 4px;
   display: inline-block;
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 /* Current month dates in black */
@@ -148,6 +149,67 @@
   }
 }
 
+/* Task container - ensure it doesn't affect cell height */
+.task-container {
+  position: relative;
+  height: calc(100% - 30px); /* Leave space for date number */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-container.expanded {
+  overflow: visible;
+  min-height: fit-content;
+}
+
+/* See More button - modern, polished styling */
+.see-more-btn {
+  background: linear-gradient(to bottom, #ffffff, #f9fafb);
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  width: calc(100% - 4px);
+  margin: 4px 2px 2px 2px;
+  transition: all 0.15s ease;
+  text-align: center;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.see-more-btn:hover {
+  background: linear-gradient(to bottom, #f9fafb, #f3f4f6);
+  border-color: #d1d5db;
+  color: #374151;
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.see-more-btn:active {
+  background: #e5e7eb;
+  transform: translateY(0);
+  box-shadow: inset 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Add a small icon to the button */
+.see-more-btn::before {
+  content: '▼';
+  font-size: 8px;
+  opacity: 0.6;
+}
+
+.see-more-btn.expanded::before {
+  content: '▲';
+}
+
 /* Day headers */
 .calendar-header-row {
   display: flex;
@@ -168,148 +230,113 @@
 
 /* Calendar container */
 .calendar-view {
-  max-width: 100%;
-  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
+/* Fixed header styles */
+.calendar-header-fixed {
+  flex-shrink: 0;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 30;
+}
+
+/* Calendar container */
 .calendar-container {
   background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0; /* Important for flex container scrolling */
 }
 
+/* Ensure month sections work within the scrollable container */
 .month-section {
   border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0; /* Remove margin for seamless infinite scroll */
+}
+
+/* Same for all months - remove any month-specific height variations */
+.month-section .calendar-grid {
+  grid-auto-rows: 120px; /* Same for all months */
 }
 
 .month-section:last-child {
   border-bottom: none;
 }
 
-/* Calendar header styling */
-.calendar-header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 16px 24px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-/* Task count summary */
-.task-summary {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-  font-size: 14px;
-}
-
-.task-count {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.count-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-/* Weekend toggle */
-.weekend-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #6b7280;
-  cursor: pointer;
-}
-
-.weekend-toggle input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  border: 1px solid #d1d5db;
-  background: white;
-  cursor: pointer;
-}
-
-/* Month title */
-.month-title {
+.month-section h3 {
   font-size: 18px;
   font-weight: 600;
   color: #111827;
-  margin-bottom: 16px;
-  padding: 16px 24px 0;
+  padding: 16px 0 8px 0;
+  margin: 0;
+  background: white;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+  border-bottom: 1px solid #e5e7eb;
 }
 
-/* Task container */
-.task-container {
-  min-height: 60px;
-  transition: height 0.3s ease;
-  overflow: visible; /* Changed from hidden to allow expansion */
-}
-
-.task-container.expanded {
-  height: auto;
-}
-
-/* See More/Less button styling */
-.see-more-btn {
-  background: #f3f4f6;
-  color: #6b7280;
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  border: none;
-  cursor: pointer;
-  width: 100%;
-  margin-top: 2px;
-  transition: background-color 0.2s ease;
-  font-weight: 500;
-  text-align: center;
-}
-
-.see-more-btn:hover {
-  background: #e5e7eb;
-  color: #4b5563;
-}
-
-.see-more-btn:active {
-  background: #d1d5db;
-}
-
-/* Loading indicator */
 .loading-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 32px;
+  padding: 20px;
   color: #6b7280;
   font-size: 14px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin: 10px 0;
+  transition: all 0.2s ease;
 }
 
-.loading-spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #e5e7eb;
-  border-top: 2px solid #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.loading-indicator:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
+}
+
+.scroll-helper {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  transition: all 0.2s ease;
+}
+
+.scroll-helper svg {
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-6px);
+  }
+  60% {
+    transform: translateY(-3px);
+  }
 }
 
 /* Mobile Calendar List Styles */
@@ -348,11 +375,43 @@ html {
   margin-bottom: 12px;
 }
 
-/* Responsive design */
+/* Responsive design - make cells responsive but consistent */
+@media (min-width: 1024px) {
+  .calendar-cell {
+    min-height: 140px;
+    height: 140px;
+  }
+  
+  .calendar-grid {
+    grid-auto-rows: 140px;
+  }
+  
+  .month-section .calendar-grid {
+    grid-auto-rows: 140px;
+  }
+  
+  .calendar-cell.weekend {
+    height: 140px;
+  }
+}
+
 @media (max-width: 1023px) {
   .calendar-cell {
-    min-height: 80px;
+    min-height: 100px;
+    height: 100px;
     padding: 6px;
+  }
+  
+  .calendar-grid {
+    grid-auto-rows: 100px;
+  }
+  
+  .month-section .calendar-grid {
+    grid-auto-rows: 100px;
+  }
+  
+  .calendar-cell.weekend {
+    height: 100px;
   }
   
   .calendar-task {
@@ -367,6 +426,26 @@ html {
   .today .date-number {
     width: 24px;
     height: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .calendar-cell {
+    min-height: 100px;
+    height: 100px;
+    padding: 4px;
+  }
+  
+  .calendar-grid {
+    grid-auto-rows: 100px;
+  }
+  
+  .month-section .calendar-grid {
+    grid-auto-rows: 100px;
+  }
+  
+  .calendar-cell.weekend {
+    height: 100px;
   }
 }
 
@@ -385,8 +464,21 @@ html {
   }
   
   .calendar-cell {
-    min-height: 60px;
+    min-height: 80px;
+    height: 80px;
     padding: 4px;
+  }
+  
+  .calendar-grid {
+    grid-auto-rows: 80px;
+  }
+  
+  .month-section .calendar-grid {
+    grid-auto-rows: 80px;
+  }
+  
+  .calendar-cell.weekend {
+    height: 80px;
   }
   
   .calendar-task {
@@ -413,13 +505,13 @@ html {
   /* Mobile-specific see more button */
   .see-more-btn {
     font-size: 10px;
-    padding: 1px 4px;
-    margin-top: 1px;
+    padding: 2px 4px;
+    margin-top: 2px;
   }
   
   /* Ensure task container works well on mobile */
   .task-container {
-    min-height: 40px;
+    height: calc(100% - 24px);
   }
 }
 
