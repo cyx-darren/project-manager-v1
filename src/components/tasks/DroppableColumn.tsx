@@ -83,13 +83,16 @@ export const DroppableColumn: React.FC<DroppableColumnProps> = ({
     <div
       ref={setNodeRef}
       className={`
-        flex flex-col h-full min-h-[500px] rounded-lg border-2 transition-all duration-200 ease-in-out
+        flex flex-col h-full min-h-[500px] rounded-lg border-2 transition-all duration-300 ease-out
         ${getColumnColor(id, isOver)}
-        ${isOver ? 'transform scale-105' : 'transform scale-100'}
+        ${isOver 
+          ? 'transform scale-[1.02] -translate-y-1 shadow-xl' 
+          : 'transform scale-100 translate-y-0'
+        }
       `}
     >
       {/* Column Header */}
-      <div className={`px-4 py-3 rounded-t-lg border-b transition-all duration-200 ${getColumnHeaderColor(id, isOver)}`}>
+      <div className={`px-4 py-3 rounded-t-lg border-b transition-all duration-300 ease-out ${getColumnHeaderColor(id, isOver)}`}>
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">{title}</h3>
           <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-medium bg-white rounded-full">
@@ -164,10 +167,10 @@ export const DroppableColumn: React.FC<DroppableColumnProps> = ({
           {/* Empty state */}
           {tasks.length === 0 && (
             <div className={`
-              flex items-center justify-center h-32 text-sm rounded-lg border-2 border-dashed transition-all duration-200
+              flex items-center justify-center h-32 text-sm rounded-lg border-2 border-dashed transition-all duration-300 ease-out
               ${isOver 
-                ? 'border-blue-400 bg-blue-50 text-blue-600 animate-pulse' 
-                : 'border-gray-300 text-gray-500'
+                ? 'border-blue-400 bg-blue-50 text-blue-600 animate-bounce scale-105' 
+                : 'border-gray-300 text-gray-500 hover:border-gray-400 hover:bg-gray-50'
               }
             `}>
               {isOver ? 'Release to drop task here' : 'Drop tasks here'}
@@ -186,9 +189,9 @@ export const DroppableColumn: React.FC<DroppableColumnProps> = ({
               <div 
                 ref={setBottomRef}
                 className={`
-                  h-16 flex items-center justify-center text-sm rounded-lg border-2 border-dashed transition-all duration-200
+                  h-16 flex items-center justify-center text-sm rounded-lg border-2 border-dashed transition-all duration-300 ease-out
                   ${activeTaskId 
-                    ? 'border-gray-300 text-gray-400 hover:border-blue-300 hover:text-blue-500' 
+                    ? 'border-gray-300 text-gray-400 hover:border-blue-300 hover:text-blue-500 hover:scale-105 hover:bg-blue-50' 
                     : 'border-transparent text-transparent'
                   }
                 `}

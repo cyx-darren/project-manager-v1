@@ -39,7 +39,7 @@ export const DraggableTask: React.FC<DraggableTaskProps> = ({
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: transition || 'transform 200ms ease',
+    transition: transition || 'transform 300ms cubic-bezier(0.2, 0, 0, 1)',
   }
 
   return (
@@ -47,7 +47,11 @@ export const DraggableTask: React.FC<DraggableTaskProps> = ({
       ref={setNodeRef}
       style={style}
       className={`
-        ${isDragging ? 'opacity-30' : ''}
+        transition-all duration-300 ease-out
+        ${isDragging 
+          ? 'opacity-40 scale-105 rotate-2 z-50 shadow-2xl' 
+          : 'opacity-100 scale-100 rotate-0 hover:scale-[1.02] hover:shadow-lg'
+        }
       `}
       {...attributes}
     >

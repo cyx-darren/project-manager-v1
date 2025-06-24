@@ -20,12 +20,15 @@
     "@hookform/resolvers": "^5.1.1",
     "@supabase/supabase-js": "^2.50.0",
     "@tailwindcss/line-clamp": "^0.4.4",
+    "@types/react-window": "^1.8.8",
     "lucide-react": "^0.522.0",
     "react": "^19.1.0",
     "react-big-calendar": "^1.19.4",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.58.1",
     "react-router-dom": "^7.6.2",
+    "react-window": "^1.8.11",
+    "react-window-infinite-loader": "^1.0.10",
     "zod": "^3.25.67"
   },
   "devDependencies": {

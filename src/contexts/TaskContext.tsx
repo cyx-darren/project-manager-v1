@@ -3,6 +3,16 @@ import { taskService } from '../services/taskService'
 import { useToastContext } from './ToastContext'
 import type { Task, TaskInsert, TaskUpdate } from '../types/supabase'
 
+// History entry for undo/redo functionality
+interface HistoryEntry {
+  id: string
+  timestamp: number
+  action: 'move' | 'create' | 'update' | 'delete'
+  description: string
+  previousState: Task[]
+  currentState: Task[]
+}
+
 // Action types for task state management
 type TaskAction =
   | { type: 'SET_TASKS'; payload: Task[] }
@@ -14,12 +24,19 @@ type TaskAction =
   | { type: 'OPTIMISTIC_UPDATE'; payload: { id: string; updates: Partial<Task> } }
   | { type: 'REVERT_OPTIMISTIC'; payload: { id: string; originalTask: Task } }
   | { type: 'BATCH_UPDATE'; payload: { updates: Array<{ id: string; updates: Partial<Task> }> } }
+  | { type: 'ADD_HISTORY'; payload: HistoryEntry }
+  | { type: 'UNDO'; payload: void }
+  | { type: 'REDO'; payload: void }
+  | { type: 'CLEAR_HISTORY'; payload: void }
 
 interface TaskState {
   tasks: Task[]
   loading: boolean
   error: string | null
   optimisticUpdates: Map<string, Task> // Store original tasks for rollback
+  history: HistoryEntry[]
+  historyIndex: number // Current position in history (-1 means no history)
+  maxHistorySize: number
 }
 
 interface TaskContextValue {
@@ -41,6 +58,14 @@ interface TaskContextValue {
   optimisticUpdate: (id: string, updates: Partial<Task>) => void
   revertOptimistic: (id: string) => void
   
+  // History management
+  canUndo: boolean
+  canRedo: boolean
+  undo: () => void
+  redo: () => void
+  addToHistory: (action: 'move' | 'create' | 'update' | 'delete', description: string, previousState: Task[], currentState: Task[]) => void
+  clearHistory: () => void
+  
   // Utilities
   getTaskById: (id: string) => Task | undefined
   getTasksByStatus: (status?: 'todo' | 'in_progress' | 'done') => Task[]
@@ -52,7 +77,10 @@ const initialState: TaskState = {
   tasks: [],
   loading: false,
   error: null,
-  optimisticUpdates: new Map()
+  optimisticUpdates: new Map(),
+  history: [],
+  historyIndex: -1,
+  maxHistorySize: 50
 }
 
 function taskReducer(state: TaskState, action: TaskAction): TaskState {
@@ -135,6 +163,45 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         })
       }
     
+    case 'ADD_HISTORY':
+      const newHistory = [...state.history.slice(0, state.historyIndex + 1), action.payload]
+      // Limit history size
+      const trimmedHistory = newHistory.slice(-state.maxHistorySize)
+      return {
+        ...state,
+        history: trimmedHistory,
+        historyIndex: trimmedHistory.length - 1
+      }
+    
+    case 'UNDO':
+      if (state.historyIndex >= 0) {
+        const historyEntry = state.history[state.historyIndex]
+        return {
+          ...state,
+          tasks: [...historyEntry.previousState],
+          historyIndex: state.historyIndex - 1
+        }
+      }
+      return state
+    
+    case 'REDO':
+      if (state.historyIndex < state.history.length - 1) {
+        const historyEntry = state.history[state.historyIndex + 1]
+        return {
+          ...state,
+          tasks: [...historyEntry.currentState],
+          historyIndex: state.historyIndex + 1
+        }
+      }
+      return state
+    
+    case 'CLEAR_HISTORY':
+      return {
+        ...state,
+        history: [],
+        historyIndex: -1
+      }
+    
     default:
       return state
   }
@@ -149,6 +216,44 @@ interface TaskProviderProps {
 export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(taskReducer, initialState)
   const { showSuccess, showError } = useToastContext()
+
+  // History management functions
+  const addToHistory = useCallback((
+    action: 'move' | 'create' | 'update' | 'delete',
+    description: string,
+    previousState: Task[],
+    currentState: Task[]
+  ) => {
+    const historyEntry: HistoryEntry = {
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      action,
+      description,
+      previousState: [...previousState],
+      currentState: [...currentState]
+    }
+    dispatch({ type: 'ADD_HISTORY', payload: historyEntry })
+  }, [])
+
+  const undo = useCallback(() => {
+    if (state.historyIndex >= 0) {
+      dispatch({ type: 'UNDO', payload: undefined })
+    }
+  }, [state.historyIndex])
+
+  const redo = useCallback(() => {
+    if (state.historyIndex < state.history.length - 1) {
+      dispatch({ type: 'REDO', payload: undefined })
+    }
+  }, [state.historyIndex, state.history.length])
+
+  const clearHistory = useCallback(() => {
+    dispatch({ type: 'CLEAR_HISTORY', payload: undefined })
+  }, [])
+
+  // Computed values
+  const canUndo = state.historyIndex >= 0
+  const canRedo = state.historyIndex < state.history.length - 1
 
   // Load tasks for a project
   const loadTasks = useCallback(async (projectId: string) => {
@@ -259,6 +364,11 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     newStatus: 'todo' | 'in_progress' | 'done', 
     newOrderIndex: number
   ): Promise<Task | null> => {
+    // Store state before change for history
+    const previousState = [...state.tasks]
+    const task = state.tasks.find(t => t.id === id)
+    const oldStatus = task?.status
+    
     // Apply optimistic update immediately
     dispatch({ 
       type: 'OPTIMISTIC_UPDATE', 
@@ -270,6 +380,18 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
       if (response.success && response.data) {
         // Replace optimistic update with real data
         dispatch({ type: 'UPDATE_TASK', payload: { id, updates: response.data } })
+        
+        // Add to history for undo/redo functionality
+        const currentState = state.tasks.map(t => 
+          t.id === id ? { ...t, status: newStatus, order_index: newOrderIndex } : t
+        )
+        addToHistory(
+          'move',
+          `Moved task from ${oldStatus} to ${newStatus}`,
+          previousState,
+          currentState
+        )
+        
         return response.data
       } else {
         // Revert optimistic update on failure
@@ -290,7 +412,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
       showError('Update Failed', errorMessage)
       return null
     }
-  }, [state.optimisticUpdates, showError])
+  }, [state.optimisticUpdates, state.tasks, addToHistory, showError])
 
   // Batch update task orders
   const batchUpdateTaskOrders = useCallback(async (
@@ -372,6 +494,14 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     // Optimistic updates
     optimisticUpdate,
     revertOptimistic,
+    
+    // History management
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    addToHistory,
+    clearHistory,
     
     // Utilities
     getTaskById,

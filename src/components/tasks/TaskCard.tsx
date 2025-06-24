@@ -8,6 +8,7 @@ import { taskService } from '../../services/taskService'
 import { useToastContext } from '../../contexts/ToastContext'
 import type { AssignableUser } from '../../services/teamService'
 import InlineTaskEdit from './InlineTaskEdit'
+import { DragHandle } from './DragHandle'
 import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities'
 
 interface TaskCardProps {
@@ -146,21 +147,31 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     <div
       className={`
         p-4 space-y-3 bg-white border border-gray-200 rounded-lg shadow-sm
-        ${isDragOverlay ? 'shadow-2xl transform rotate-3 scale-105' : 'hover:shadow-md'}
-        transition-all duration-200
+        ${isDragOverlay 
+          ? 'shadow-2xl transform rotate-3 scale-110 bg-blue-50 border-blue-300' 
+          : 'hover:shadow-lg hover:border-gray-300 hover:-translate-y-1'
+        }
+        transition-all duration-300 ease-out
         ${className}
       `}
     >
-      {/* Header with title and action buttons */}
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0" {...dragListeners}>
+      {/* Header with drag handle, title and action buttons */}
+      <div className="flex items-start gap-2">
+        {/* Drag Handle */}
+        <DragHandle 
+          listeners={dragListeners}
+          disabled={!canEditTasks || isDragOverlay}
+        />
+        
+        {/* Title */}
+        <div className="flex-1 min-w-0">
           {canEditTasks && !isDragOverlay && onTaskUpdated ? (
             <InlineTaskEdit 
               task={task} 
               onTaskUpdated={onTaskUpdated}
             />
           ) : (
-            <h3 className="font-semibold text-base text-gray-900 leading-tight cursor-grab active:cursor-grabbing">
+            <h3 className="font-semibold text-base text-gray-900 leading-tight">
               {task.title}
             </h3>
           )}
@@ -168,7 +179,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         
         {/* Action buttons */}
         {!isDragOverlay && (
-          <div className="flex items-center gap-1 ml-3 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {canEditTasks && onEditTask && (
               <button
                 onClick={(e) => {

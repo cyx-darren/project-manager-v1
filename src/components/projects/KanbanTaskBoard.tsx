@@ -8,6 +8,8 @@ import { usePermission } from '../../hooks/usePermissions'
 import { DroppableColumn, TaskCard } from '../tasks'
 import { TaskModal } from '../tasks'
 import { useTaskContext } from '../../contexts/TaskContext'
+import { VirtualizedColumn } from '../tasks/VirtualizedColumn'
+import { UndoRedoControls } from '../tasks/UndoRedoControls'
 
 interface KanbanTaskBoardProps {
   project: Project
@@ -32,6 +34,7 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
   const [overId, setOverId] = useState<string | null>(null)
+  const [useVirtualization, setUseVirtualization] = useState(false)
 
   const canCreateTasks = usePermission('task.create', { projectId: project.id })
   const canEditTasks = usePermission('task.edit', { projectId: project.id })
@@ -61,6 +64,13 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
 
     return grouped
   }, [tasks])
+
+  // Determine if we should use virtualization based on task count
+  React.useEffect(() => {
+    const totalTasks = Object.values(tasksByStatus).reduce((total, tasks) => total + tasks.length, 0)
+    const shouldVirtualize = totalTasks > 50 || Object.values(tasksByStatus).some(tasks => tasks.length > 20)
+    setUseVirtualization(shouldVirtualize)
+  }, [tasksByStatus])
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event
@@ -260,15 +270,18 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
             {tasks.length} total tasks
           </p>
         </div>
-        {canCreateTasks && (
-          <button 
-            onClick={handleCreateTask}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Task
-          </button>
-        )}
+        <div className="flex items-center gap-4">
+          <UndoRedoControls />
+          {canCreateTasks && (
+            <button 
+              onClick={handleCreateTask}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Task
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Kanban Board */}
@@ -280,20 +293,24 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
           collisionDetection={closestCorners}
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 min-h-[600px]">
-            {Object.entries(COLUMN_CONFIG).map(([statusKey, config]) => (
-              <DroppableColumn
-                key={statusKey}
-                id={config.id}
-                title={config.title}
-                tasks={tasksByStatus[statusKey as TaskStatus]}
-                projectId={project.id}
-                onTaskUpdated={handleTaskUpdated}
-                onEditTask={handleEditTask}
-                onTaskDeleted={handleTaskDeleted}
-                activeTaskId={activeTask?.id || null}
-                overId={overId}
-              />
-            ))}
+            {Object.entries(COLUMN_CONFIG).map(([statusKey, config]) => {
+              const ColumnComponent = useVirtualization ? VirtualizedColumn : DroppableColumn
+              
+              return (
+                <ColumnComponent
+                  key={statusKey}
+                  id={config.id}
+                  title={config.title}
+                  tasks={tasksByStatus[statusKey as TaskStatus]}
+                  projectId={project.id}
+                  onTaskUpdated={handleTaskUpdated}
+                  onEditTask={handleEditTask}
+                  onTaskDeleted={handleTaskDeleted}
+                  activeTaskId={activeTask?.id || null}
+                  overId={overId}
+                />
+              )
+            })}
           </div>
           
           {/* Drag Overlay - Shows the visual preview while dragging */}
