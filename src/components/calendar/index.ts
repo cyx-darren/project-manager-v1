@@ -1,1 +1,1 @@
-export { CalendarView } from './CalendarView' 
+export { default as CalendarView } from './CalendarView' 
