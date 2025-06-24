@@ -5,6 +5,7 @@ import { usePermission } from '../../hooks/usePermissions'
 import { AssigneeAvatar } from '../common'
 import { teamService } from '../../services/teamService'
 import { taskService } from '../../services/taskService'
+import { useToastContext } from '../../contexts/ToastContext'
 import type { AssignableUser } from '../../services/teamService'
 import InlineTaskEdit from './InlineTaskEdit'
 import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities'
@@ -32,6 +33,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const canEditTasks = usePermission('task.edit', { projectId })
   const canDeleteTasks = usePermission('task.delete', { projectId })
+  const { showSuccess, showError } = useToastContext()
   const [assignee, setAssignee] = useState<AssignableUser | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -66,12 +68,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       if (result.success) {
         onTaskDeleted?.(task.id)
         setShowDeleteConfirm(false)
+        showSuccess('Task Deleted', 'Task has been successfully deleted')
       } else {
-        alert('Failed to delete task: ' + result.error)
+        showError('Delete Failed', result.error || 'Failed to delete task')
       }
     } catch (error) {
       console.error('Error deleting task:', error)
-      alert('Failed to delete task')
+      showError('Delete Failed', 'An unexpected error occurred while deleting the task')
     } finally {
       setIsDeleting(false)
     }

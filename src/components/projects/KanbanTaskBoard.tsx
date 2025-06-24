@@ -7,12 +7,12 @@ import type { Project, Task, TaskStatus } from '../../types/supabase'
 import { usePermission } from '../../hooks/usePermissions'
 import { DroppableColumn, TaskCard } from '../tasks'
 import { TaskModal } from '../tasks'
-import { taskService } from '../../services/taskService'
+import { useTaskContext } from '../../contexts/TaskContext'
 
 interface KanbanTaskBoardProps {
   project: Project
-  tasks: Task[]
-  onTasksUpdate: (tasks: Task[]) => void
+  tasks?: Task[] // Optional for backward compatibility
+  onTasksUpdate?: (tasks: Task[]) => void // Optional for backward compatibility
 }
 
 const COLUMN_CONFIG = {
@@ -23,9 +23,10 @@ const COLUMN_CONFIG = {
 
 export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
   project,
-  tasks,
+  tasks: propTasks, // Keep for backward compatibility
   onTasksUpdate
 }) => {
+  const { tasks, updateTaskOrder, batchUpdateTaskOrders, deleteTask } = useTaskContext()
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
@@ -91,7 +92,6 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
     const isOverTask = overData?.type === 'task'
 
     let newStatus: TaskStatus = activeTask.status
-    let newTasks = [...tasks]
 
     if (isOverColumn) {
       // Check if dropping on bottom zone
@@ -109,18 +109,16 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
 
         try {
           setIsUpdating(true)
-          const response = await taskService.updateTaskOrder(activeId, newStatus, newOrderIndex)
+          const updatedTask = await updateTaskOrder(activeId, newStatus, newOrderIndex)
           
-          if (response.success && response.data) {
-            // Update local state
-            newTasks = newTasks.map(task => 
+          if (updatedTask) {
+            // TaskContext handles state updates automatically with optimistic updates
+            // Call backward compatibility callback if provided
+            onTasksUpdate?.(tasks.map(task => 
               task.id === activeId 
                 ? { ...task, status: newStatus, order_index: newOrderIndex }
                 : task
-            )
-            onTasksUpdate(newTasks)
-          } else {
-            console.error('Failed to update task:', response.error)
+            ))
           }
         } catch (error) {
           console.error('Error updating task:', error)
@@ -152,19 +150,17 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
 
           try {
             setIsUpdating(true)
-            const response = await taskService.batchUpdateTaskOrders(updates)
+            const success = await batchUpdateTaskOrders(updates)
             
-            if (response.success) {
-              // Update local state
-              newTasks = newTasks.map(task => {
+            if (success) {
+              // TaskContext handles state updates automatically with optimistic updates
+              // Call backward compatibility callback if provided
+              onTasksUpdate?.(tasks.map(task => {
                 const update = updates.find(u => u.id === task.id)
                 return update 
                   ? { ...task, order_index: update.order_index }
                   : task
-              })
-              onTasksUpdate(newTasks)
-            } else {
-              console.error('Failed to update task orders:', response.error)
+              }))
             }
           } catch (error) {
             console.error('Error updating task orders:', error)
@@ -180,9 +176,9 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
 
         try {
           setIsUpdating(true)
-          const response = await taskService.updateTaskOrder(activeId, newStatus, newOrderIndex)
+          const updatedTask = await updateTaskOrder(activeId, newStatus, newOrderIndex)
           
-          if (response.success && response.data) {
+          if (updatedTask) {
             // Update order indices for tasks in the target column that come after the drop position
             const updatesForTargetColumn = targetColumnTasks
               .slice(newOrderIndex)
@@ -192,11 +188,12 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
               }))
 
             if (updatesForTargetColumn.length > 0) {
-              await taskService.batchUpdateTaskOrders(updatesForTargetColumn)
+              await batchUpdateTaskOrders(updatesForTargetColumn)
             }
 
-            // Update local state
-            newTasks = newTasks.map(task => {
+            // TaskContext handles state updates automatically with optimistic updates
+            // Call backward compatibility callback if provided
+            onTasksUpdate?.(tasks.map(task => {
               if (task.id === activeId) {
                 return { ...task, status: newStatus, order_index: newOrderIndex }
               }
@@ -204,10 +201,7 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
               return update 
                 ? { ...task, order_index: update.order_index }
                 : task
-            })
-            onTasksUpdate(newTasks)
-          } else {
-            console.error('Failed to update task:', response.error)
+            }))
           }
         } catch (error) {
           console.error('Error updating task:', error)
@@ -216,7 +210,7 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
         }
       }
     }
-  }, [tasks, tasksByStatus, canEditTasks, onTasksUpdate])
+  }, [tasks, tasksByStatus, canEditTasks, updateTaskOrder, batchUpdateTaskOrders, onTasksUpdate])
 
   const handleCreateTask = () => {
     setEditingTask(null)
@@ -229,17 +223,26 @@ export const KanbanTaskBoard: React.FC<KanbanTaskBoardProps> = ({
   }
 
   const handleTaskCreated = (newTask: Task) => {
-    onTasksUpdate([...tasks, newTask])
+    // TaskContext automatically handles task creation via TaskModal
+    // Call backward compatibility callback if provided
+    onTasksUpdate?.([...tasks, newTask])
   }
 
   const handleTaskUpdated = (updatedTask: Task) => {
-    onTasksUpdate(tasks.map(task => 
+    // TaskContext automatically handles task updates via TaskModal
+    // Call backward compatibility callback if provided
+    onTasksUpdate?.(tasks.map(task => 
       task.id === updatedTask.id ? updatedTask : task
     ))
   }
 
-  const handleTaskDeleted = (taskId: string) => {
-    onTasksUpdate(tasks.filter(task => task.id !== taskId))
+  const handleTaskDeleted = async (taskId: string) => {
+    // Use TaskContext delete method which handles optimistic updates
+    const success = await deleteTask(taskId)
+    if (success) {
+      // Call backward compatibility callback if provided
+      onTasksUpdate?.(tasks.filter(task => task.id !== taskId))
+    }
   }
 
   const handleCloseModal = () => {

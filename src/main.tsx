@@ -8,6 +8,8 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProjectProvider } from './contexts/ProjectContext'
 import { SearchProvider } from './contexts/SearchContext'
+import { ToastProvider } from './contexts/ToastContext'
+import { TaskProvider } from './contexts/TaskContext'
 // Import initialization and health checks
 import './App'
 
@@ -24,13 +26,17 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <ThemeProvider>
-        <AuthProvider>
-          <ProjectProvider>
-            <SearchProvider>
-              <RouterProvider router={router} />
-            </SearchProvider>
-          </ProjectProvider>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <ProjectProvider>
+              <TaskProvider>
+                <SearchProvider>
+                  <RouterProvider router={router} />
+                </SearchProvider>
+              </TaskProvider>
+            </ProjectProvider>
+          </AuthProvider>
+        </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>
   </StrictMode>,

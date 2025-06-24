@@ -12,6 +12,7 @@ import {
   ProjectTeam 
 } from '../components/projects'
 import { useAuth } from '../contexts/AuthContext'
+import { useTaskContext } from '../contexts/TaskContext'
 
 type TabType = 'overview' | 'tasks' | 'team' | 'calendar' | 'board'
 
@@ -19,8 +20,8 @@ const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { tasks, loading: tasksLoading, loadTasks, clearTasks } = useTaskContext()
   const [project, setProject] = useState<Project | null>(null)
-  const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -51,14 +52,8 @@ const ProjectDetail: React.FC = () => {
           throw new Error(projectResponse.error || 'Failed to fetch project')
         }
 
-        // Fetch project tasks
-        const tasksResponse = await taskService.getTasksByProject(projectId)
-        if (tasksResponse.success && tasksResponse.data) {
-          setTasks(tasksResponse.data)
-        } else {
-          // Tasks might not exist yet, which is fine
-          setTasks([])
-        }
+        // Load project tasks using TaskContext
+        await loadTasks(projectId)
 
       } catch (err) {
         console.error('Error fetching project data:', err)
@@ -69,7 +64,14 @@ const ProjectDetail: React.FC = () => {
     }
 
     fetchProjectData()
-  }, [projectId, navigate])
+  }, [projectId, navigate, loadTasks])
+
+  // Cleanup tasks when leaving project
+  useEffect(() => {
+    return () => {
+      clearTasks()
+    }
+  }, [clearTasks])
 
   const handleProjectUpdate = async (updates: Partial<Project>) => {
     if (!project || !projectId) return
@@ -105,8 +107,10 @@ const ProjectDetail: React.FC = () => {
     }
   }
 
+  // Task updates are now handled by TaskContext automatically
   const handleTasksUpdate = (updatedTasks: Task[]) => {
-    setTasks(updatedTasks)
+    // No longer needed - TaskContext handles state updates
+    // This is kept for backward compatibility with existing components
   }
 
   if (loading) {

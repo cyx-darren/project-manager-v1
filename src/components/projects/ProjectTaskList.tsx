@@ -5,6 +5,8 @@ import { usePermission } from '../../hooks/usePermissions'
 import { TaskModal, InlineTaskEdit } from '../tasks'
 import { taskService } from '../../services/taskService'
 
+import { useTaskContext } from '../../contexts/TaskContext'
+
 interface ProjectTaskListProps {
   project: Project
   tasks: Task[]
@@ -13,15 +15,17 @@ interface ProjectTaskListProps {
 
 export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
   project,
-  tasks,
+  tasks: propTasks, // Keep for backward compatibility
   onTasksUpdate
 }) => {
+
+  const { tasks, deleteTask } = useTaskContext()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'todo' | 'in_progress' | 'done'>('all')
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'urgent'>('all')
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
-  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
 
   const canCreateTasks = usePermission('task.create', { projectId: project.id })
@@ -95,13 +99,15 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
   }
 
   const handleTaskCreated = (newTask: Task) => {
-    onTasksUpdate([...tasks, newTask])
+    // TaskContext automatically handles task creation
+    onTasksUpdate?.([...tasks, newTask]) // For backward compatibility
   }
 
   const handleTaskUpdated = (updatedTask: Task) => {
-    onTasksUpdate(tasks.map(task => 
+    // TaskContext automatically handles task updates
+    onTasksUpdate?.(tasks.map(task => 
       task.id === updatedTask.id ? updatedTask : task
-    ))
+    )) // For backward compatibility
   }
 
   const handleCloseModal = () => {
@@ -112,17 +118,11 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
   const handleTaskDeleted = async (taskId: string) => {
     if (!canDeleteTasks) return
     
-    try {
-      const result = await taskService.deleteTask(taskId)
-      if (result.success) {
-        onTasksUpdate(tasks.filter(task => task.id !== taskId))
-        setShowDeleteConfirm(null)
-      } else {
-        alert('Failed to delete task: ' + result.error)
-      }
-    } catch (error) {
-      console.error('Error deleting task:', error)
-      alert('Failed to delete task')
+    // Use TaskContext for deletion with optimistic updates
+    const success = await deleteTask(taskId)
+    if (success) {
+      setShowDeleteConfirm(null)
+      onTasksUpdate?.(tasks.filter(task => task.id !== taskId)) // For backward compatibility
     }
   }
 

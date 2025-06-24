@@ -4,12 +4,15 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import Breadcrumb from '../Breadcrumb';
 import { SearchModal } from '../search';
+import { ToastContainer } from '../common';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import { useToastContext } from '../../contexts/ToastContext';
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const { toasts, removeToast } = useToastContext();
 
   // Set up global keyboard shortcuts
   useKeyboardShortcuts({
@@ -84,6 +87,12 @@ const Layout: React.FC = () => {
       <SearchModal 
         isOpen={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
+      />
+
+      {/* Toast Notifications */}
+      <ToastContainer 
+        toasts={toasts}
+        onRemoveToast={removeToast}
       />
     </div>
   );

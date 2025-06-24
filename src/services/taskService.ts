@@ -1,4 +1,5 @@
 import { supabase, getCurrentUser } from '../config/supabase'
+import { handleTaskError, retryOperation } from '../utils/taskErrorHandler'
 import type { 
   Task, 
   TaskInsert, 
@@ -472,20 +473,35 @@ export const taskService = {
    */
   async batchUpdateTaskOrders(updates: { id: string; order_index: number }[]): Promise<ApiResponse<boolean>> {
     try {
-      // Update each task individually
-      for (const update of updates) {
-        const { error } = await supabase
-          .from('tasks')
-          .update({ 
-            order_index: update.order_index,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', update.id)
+      // Validate input
+      if (!updates || updates.length === 0) {
+        throw new TaskError('No updates provided', 'INVALID_INPUT')
+      }
 
-        if (error) {
-          throw new TaskError(error.message, error.code)
+      // Validate each update
+      for (const update of updates) {
+        if (!update.id || typeof update.order_index !== 'number') {
+          throw new TaskError('Invalid update data: missing id or order_index', 'INVALID_INPUT')
         }
       }
+
+      // Use retry mechanism for network resilience
+      await retryOperation(async () => {
+        // Update each task individually
+        for (const update of updates) {
+          const { error } = await supabase
+            .from('tasks')
+            .update({ 
+              order_index: update.order_index,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', update.id)
+
+          if (error) {
+            throw new TaskError(error.message, error.code)
+          }
+        }
+      })
 
       return {
         data: true,
@@ -493,7 +509,7 @@ export const taskService = {
         success: true
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update task orders'
+      const message = handleTaskError(error, 'taskService', 'batch update task orders')
       return {
         data: null,
         error: message,

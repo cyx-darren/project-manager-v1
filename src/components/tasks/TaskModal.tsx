@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { X, Plus, Save, Loader2 } from 'lucide-react';
+import { X, Plus, Save, Loader2, AlertTriangle } from 'lucide-react';
 import { z } from 'zod';
 import { InputField, TextAreaField, SelectField } from '../forms';
 import { UserSelector } from '../common';
-import { taskService } from '../../services/taskService';
 import { teamService } from '../../services/teamService';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTaskContext } from '../../contexts/TaskContext';
+import { validateTaskData } from '../../utils/taskErrorHandler';
 import type { Task } from '../../types/supabase';
 import type { AssignableUser } from '../../services/teamService';
 
@@ -43,6 +44,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
   teamMembers = []
 }) => {
   const { user } = useAuth();
+  const { createTask, updateTask } = useTaskContext();
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   
@@ -151,32 +153,44 @@ const TaskModal: React.FC<TaskModalProps> = ({
         assignee_id: selectedAssignee?.id || null,
       };
 
-      if (isEditing && task) {
-        // Update existing task
-        const response = await taskService.updateTask(task.id, submitData);
+      // Additional client-side validation
+      const validation = validateTaskData(submitData);
+      if (!validation.isValid) {
+        setSubmitError(validation.errors.join(', '));
+        return;
+      }
 
-        if (response.success && response.data) {
-          onTaskUpdated?.(response.data);
+      if (isEditing && task) {
+        // Update existing task using TaskContext
+        const updatedTask = await updateTask(task.id, submitData);
+
+        if (updatedTask) {
+          // TaskContext handles success toast automatically
+          onTaskUpdated?.(updatedTask);
           onClose();
         } else {
-          setSubmitError(response.error || 'Failed to update task');
+          // TaskContext handles error toast automatically
+          setSubmitError('Failed to update task. Please try again.');
         }
       } else {
-        // Create new task
-        const response = await taskService.createTask({
+        // Create new task using TaskContext
+        const newTask = await createTask({
           ...submitData,
           project_id: projectId,
+          created_by: user.id,
         });
 
-        if (response.success && response.data) {
-          onTaskCreated?.(response.data);
+        if (newTask) {
+          // TaskContext handles success toast automatically
+          onTaskCreated?.(newTask);
           onClose();
         } else {
-          setSubmitError(response.error || 'Failed to create task');
+          // TaskContext handles error toast automatically
+          setSubmitError('Failed to create task. Please try again.');
         }
       }
     } catch (error) {
-      console.error('Error submitting task:', error);
+      console.error('Error in task submission:', error);
       setSubmitError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -328,8 +342,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
             {/* Submit Error */}
             {submitError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-600">{submitError}</p>
+              <div 
+                className="p-3 bg-red-50 border border-red-200 rounded-md" 
+                role="alert"
+              >
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-600">{submitError}</p>
+                  </div>
+                </div>
               </div>
             )}
 
