@@ -58,4 +58,75 @@ body {
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
   }
+
+  /* Enhanced scrollbar styles for Kanban columns */
+  .scrollbar-column {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  }
+
+  .scrollbar-column::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-column::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+  }
+
+  .scrollbar-column::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.3);
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background-clip: content-box;
+  }
+
+  .scrollbar-column:hover::-webkit-scrollbar-thumb {
+    background: rgba(107, 114, 128, 0.6);
+    background-clip: content-box;
+  }
+
+  .scrollbar-column::-webkit-scrollbar-thumb:hover {
+    background: rgba(75, 85, 99, 0.8);
+    background-clip: content-box;
+  }
+
+  /* Smooth scrolling behavior */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+
+  /* Hide scrollbar initially, show on hover */
+  .scrollbar-hover {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hover::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+  }
+
+  .scrollbar-hover:hover {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  }
+
+  .scrollbar-hover:hover::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-hover:hover::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+  }
+
+  .scrollbar-hover:hover::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.5);
+    border-radius: 4px;
+  }
+
+  .scrollbar-hover:hover::-webkit-scrollbar-thumb:hover {
+    background: rgba(107, 114, 128, 0.8);
+  }
 }

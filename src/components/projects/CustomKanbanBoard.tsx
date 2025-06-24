@@ -392,13 +392,13 @@ export const CustomKanbanBoard: React.FC<CustomKanbanBoardProps> = ({
     }
   }, [canCreateTasks, user?.id, columns, tasksByColumn, createTask, project.id, showSuccess, showError])
 
-  const handleTaskUpdated = useCallback((updatedTask: Task) => {
+  const handleTaskUpdated = useCallback(() => {
     // Task context already handles the update with optimistic updates
     // Just trigger a refresh to ensure UI is in sync
     setLastUpdated(new Date())
   }, [])
 
-  const handleTaskDeleted = useCallback((taskId: string) => {
+  const handleTaskDeleted = useCallback(() => {
     // Task context will handle the deletion
     setLastUpdated(new Date())
   }, [])
@@ -409,8 +409,8 @@ export const CustomKanbanBoard: React.FC<CustomKanbanBoardProps> = ({
     setSelectedTask(null)
   }, [])
 
-  const handleTaskUpdatedInModal = useCallback((updatedTask: Task) => {
-    handleTaskUpdated(updatedTask)
+  const handleTaskUpdatedInModal = useCallback(() => {
+    handleTaskUpdated()
     handleCloseEditModal()
   }, [handleTaskUpdated])
 
@@ -552,9 +552,6 @@ export const CustomKanbanBoard: React.FC<CustomKanbanBoardProps> = ({
                     onCreateTask={handleCreateTask}
                     onColumnUpdated={handleColumnUpdated}
                     onColumnDeleted={handleColumnDeleted}
-                    activeTaskId={activeId as string | null}
-                    overId={overId as string | null}
-                    canEditTasks={canEditTasks}
                     canManageColumns={canManageColumns}
                   />
                 ))}

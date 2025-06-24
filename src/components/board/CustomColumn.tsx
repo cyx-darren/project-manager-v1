@@ -18,9 +18,6 @@ interface CustomColumnProps {
   onCreateTask: (columnId: string) => void
   onColumnUpdated: (column: BoardColumn) => void
   onColumnDeleted: (columnId: string) => void
-  activeTaskId: string | null
-  overId: string | null
-  canEditTasks: boolean
   canManageColumns: boolean
   isLoading?: boolean
 }
@@ -35,9 +32,6 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
   onCreateTask,
   onColumnUpdated,
   onColumnDeleted,
-  activeTaskId,
-  overId,
-  canEditTasks,
   canManageColumns,
   isLoading = false
 }) => {
@@ -47,6 +41,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
   const [isDeleting, setIsDeleting] = useState(false)
   const editInputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const taskAreaRef = useRef<HTMLDivElement>(null)
 
   // Sort tasks by order_index for proper display order
   const sortedTasks = useMemo(() => {
@@ -106,7 +101,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
 
   // Close menu on outside click
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = () => {
       if (showMenu) {
         setShowMenu(false)
       }
@@ -182,17 +177,17 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
       ref={setNodeRef}
       style={columnStyle}
       className={`
-        flex flex-col bg-gray-50 rounded-lg border border-gray-200 h-full
+        flex flex-col bg-gray-50 rounded-lg border border-gray-200
         transition-all duration-200 ease-in-out
         ${isColumnDragging ? 'opacity-50 shadow-2xl scale-105 rotate-1' : 'opacity-100'}
         ${isDraggedOver ? 'ring-2 ring-blue-400 bg-blue-50 shadow-lg scale-[1.02]' : ''}
-        min-w-[320px] max-w-[320px]
+        min-w-[320px] max-w-[320px] h-[calc(100vh-200px)]
       `}
     >
-      {/* Column Header */}
+      {/* Fixed Column Header */}
       <div 
         className={`
-          flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-lg
+          flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-lg
           ${isDraggedOver ? 'bg-blue-50' : ''}
         `}
         {...sortableAttributes}
@@ -204,55 +199,98 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
             className="w-3 h-3 rounded-full flex-shrink-0" 
             style={{ backgroundColor: column.color || '#6B7280' }}
           />
-          <h3 className="font-semibold text-gray-900 truncate">{column.name}</h3>
-          <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium">
+          
+          {/* Column Title - Editable */}
+          {isEditing ? (
+            <input
+              ref={editInputRef}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={handleEditSave}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleEditSave()
+                } else if (e.key === 'Escape') {
+                  handleEditCancel()
+                }
+              }}
+              className="flex-1 font-semibold text-gray-900 bg-transparent border-none outline-none focus:bg-white focus:border focus:border-blue-300 focus:rounded px-1"
+              maxLength={50}
+            />
+          ) : (
+            <h3 
+              className="font-semibold text-gray-900 truncate cursor-pointer hover:text-blue-600"
+              onClick={handleEditStart}
+              title={column.name}
+            >
+              {column.name}
+            </h3>
+          )}
+          
+          {/* Task Count Badge */}
+          <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium flex-shrink-0">
             {sortedTasks.length}
           </span>
         </div>
         
-        {/* Column Actions */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-1 hover:bg-gray-100 rounded-md transition-colors"
-          >
-            <MoreHorizontal className="h-4 w-4 text-gray-500" />
-          </button>
-          
-          {showMenu && (
-            <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-              <button
-                onClick={handleEditStart}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                <Edit2 className="h-4 w-4" />
-                Edit Column
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete Column
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Column Actions Menu */}
+        {canManageColumns && (
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+              disabled={isDeleting}
+            >
+              <MoreHorizontal className="h-4 w-4 text-gray-500" />
+            </button>
+            
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-1 w-40 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                <button
+                  onClick={handleEditStart}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  disabled={isDeleting}
+                >
+                  <Edit2 className="h-4 w-4" />
+                  Edit Column
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isDeleting ? 'Deleting...' : 'Delete Column'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Tasks Container with Enhanced Drop Zone */}
-      <div className="flex-1 p-3 overflow-y-auto">
+      {/* Scrollable Tasks Container */}
+      <div 
+        ref={taskAreaRef}
+        className={`
+          flex-1 overflow-y-auto overflow-x-hidden p-3 scroll-smooth
+          scrollbar-column
+        `}
+        style={{ 
+          maxHeight: 'calc(100vh - 300px)',
+        }}
+      >
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           <div 
             className={`
               min-h-full space-y-3 relative
-              ${isDraggedOver && isEmpty ? 'border-2 border-dashed border-blue-300 rounded-lg' : ''}
+              ${isDraggedOver && isEmpty ? 'border-2 border-dashed border-blue-300 rounded-lg min-h-[200px]' : ''}
             `}
           >
             {/* Enhanced empty state with drop indicator */}
             {isEmpty && (
               <div className={`
-                flex flex-col items-center justify-center py-8 text-gray-500 rounded-lg
+                flex flex-col items-center justify-center py-12 text-gray-500 rounded-lg min-h-[200px]
                 transition-all duration-200
                 ${isDraggedOver 
                   ? 'bg-blue-50 text-blue-600 transform scale-105' 
@@ -266,15 +304,18 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
                   </div>
                 ) : (
                   <div className="text-center">
-                    <p className="text-sm">No tasks yet</p>
-                    <p className="text-xs mt-1">Click + to add a task</p>
+                    <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
+                      <Plus className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm font-medium">No tasks yet</p>
+                    <p className="text-xs mt-1 text-gray-400">Click + below to add a task</p>
                   </div>
                 )}
               </div>
             )}
             
             {/* Tasks with enhanced visual feedback */}
-            {sortedTasks.map((task, index) => (
+            {sortedTasks.map((task) => (
               <DraggableTask
                 key={task.id}
                 task={task}
@@ -289,7 +330,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
             {isDraggedOver && !isEmpty && (
               <div className="absolute inset-0 pointer-events-none">
                 <div className="h-full w-full border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 bg-opacity-50 flex items-center justify-center">
-                  <div className="text-blue-600 text-sm font-medium animate-pulse">
+                  <div className="text-blue-600 text-sm font-medium animate-pulse bg-white px-3 py-1 rounded-full shadow-sm">
                     Drop to reorder tasks
                   </div>
                 </div>
@@ -299,11 +340,12 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
         </SortableContext>
       </div>
 
-      {/* Add Task Button */}
-      <div className="p-3 border-t border-gray-200">
+      {/* Fixed Add Task Footer */}
+      <div className="flex-shrink-0 p-3 border-t border-gray-200 bg-white rounded-b-lg">
         <button
           onClick={() => onCreateTask(column.id)}
-          className="flex items-center gap-2 w-full p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors text-sm"
+          className="flex items-center gap-2 w-full p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors text-sm font-medium"
+          disabled={isLoading}
         >
           <Plus className="h-4 w-4" />
           Add task
