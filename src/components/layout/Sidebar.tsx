@@ -3,7 +3,6 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   HomeIcon, 
   FolderIcon, 
-  CalendarIcon, 
   ChartBarIcon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -159,16 +158,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       description: 'Team members and collaboration',
       keywords: ['team', 'members', 'people', 'collaboration']
     },
-    { 
-      name: 'Calendar', 
-      icon: CalendarIcon, 
-      href: '/calendar', 
-      shortName: 'Calendar',
-      public: true,
-      category: 'work',
-      description: 'Deadlines, milestones, and scheduling',
-      keywords: ['calendar', 'schedule', 'deadlines', 'dates']
-    },
+
     { 
       name: 'Reports', 
       icon: ChartBarIcon, 

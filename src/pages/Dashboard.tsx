@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   FolderIcon, 
-  CalendarIcon, 
   ChartBarIcon,
   PlusIcon,
   CheckCircleIcon,
@@ -92,13 +91,7 @@ const Dashboard: React.FC = () => {
       icon: PlusIcon,
       color: 'bg-blue-600 hover:bg-blue-700'
     },
-    {
-      name: 'View Calendar',
-      description: 'See tasks in calendar view',
-      href: '/calendar',
-      icon: CalendarIcon,
-      color: 'bg-green-600 hover:bg-green-700'
-    },
+
     {
       name: 'View Reports',
       description: 'Check project progress',

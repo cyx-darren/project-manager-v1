@@ -11,6 +11,8 @@ import {
   CustomKanbanBoard,
   ProjectTeam 
 } from '../components/projects'
+import { CalendarView } from '../components/calendar'
+import { TaskModal } from '../components/tasks'
 import { useAuth } from '../contexts/AuthContext'
 import { useTaskContext } from '../contexts/TaskContext'
 import { useProject } from '../contexts/ProjectContext'
@@ -20,13 +22,18 @@ type TabType = 'overview' | 'tasks' | 'team' | 'calendar' | 'board'
 const ProjectDetail: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user } = useAuth() // Used for TaskModal user context
   const { tasks, loading: tasksLoading, loadTasks, clearTasks } = useTaskContext()
   const { setCurrentProject } = useProject()
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabType>('overview')
+  
+  // Task modal state for calendar interactions
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [newTaskDueDate, setNewTaskDueDate] = useState<string | null>(null)
 
   useEffect(() => {
     if (!projectId) {
@@ -118,6 +125,39 @@ const ProjectDetail: React.FC = () => {
     // This is kept for backward compatibility with existing components
   }
 
+  // Calendar event handlers
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task)
+    setNewTaskDueDate(null)
+    setIsTaskModalOpen(true)
+  }
+
+  const handleDateClick = (date: Date) => {
+    // Format date for task creation (YYYY-MM-DD format)
+    const formattedDate = date.toISOString().split('T')[0]
+    setSelectedTask(null)
+    setNewTaskDueDate(formattedDate)
+    setIsTaskModalOpen(true)
+  }
+
+  const handleTaskModalClose = () => {
+    setIsTaskModalOpen(false)
+    setSelectedTask(null)
+    setNewTaskDueDate(null)
+  }
+
+  const handleTaskCreated = (task: Task) => {
+    // TaskContext already handles the task creation and state updates
+    // This is just for any additional logic needed
+    console.log('New task created from calendar:', task)
+  }
+
+  const handleTaskUpdated = (task: Task) => {
+    // TaskContext already handles the task updates and state updates
+    // This is just for any additional logic needed
+    console.log('Task updated from calendar:', task)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -194,8 +234,12 @@ const ProjectDetail: React.FC = () => {
       case 'calendar':
         return (
           <div className="px-6 py-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Calendar View</h3>
-            <p className="text-gray-600">Calendar view coming soon...</p>
+            <CalendarView 
+              project={project}
+              tasks={tasks}
+              onTaskClick={handleTaskClick}
+              onDateClick={handleDateClick}
+            />
           </div>
         )
       case 'board':
@@ -236,6 +280,19 @@ const ProjectDetail: React.FC = () => {
       <div className="flex-1 flex flex-col min-h-0">
         {renderTabContent()}
       </div>
+      
+      {/* Task Modal for calendar interactions */}
+      {projectId && (
+        <TaskModal
+          isOpen={isTaskModalOpen}
+          onClose={handleTaskModalClose}
+          onTaskCreated={handleTaskCreated}
+          onTaskUpdated={handleTaskUpdated}
+          projectId={projectId}
+          task={selectedTask}
+          initialDueDate={newTaskDueDate}
+        />
+      )}
     </div>
   )
 }

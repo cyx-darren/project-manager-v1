@@ -32,6 +32,7 @@ interface TaskModalProps {
   projectId: string;
   task?: Task | null;
   teamMembers?: Array<{ id: string; email: string; name?: string }>;
+  initialDueDate?: string | null;
 }
 
 const TaskModal: React.FC<TaskModalProps> = ({
@@ -41,7 +42,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
   onTaskUpdated,
   projectId,
   task,
-  teamMembers = []
+  teamMembers = [],
+  initialDueDate = null
 }) => {
   const { user } = useAuth();
   const { createTask, updateTask } = useTaskContext();
@@ -120,20 +122,20 @@ const TaskModal: React.FC<TaskModalProps> = ({
           setSelectedAssignee(null);
         }
       } else {
-        // Creating mode - reset to defaults
+        // Creating mode - reset to defaults with optional initial due date
         reset({
           title: '',
           description: '',
           priority: 'medium',
           status: 'todo',
-          due_date: '',
+          due_date: initialDueDate || '',
           estimated_hours: undefined,
         });
         setSelectedAssignee(null);
       }
       setSubmitError(null);
     }
-  }, [isOpen, task, reset, assignees]);
+  }, [isOpen, task, reset, assignees, initialDueDate]);
 
   const onSubmit = async (data: TaskFormData) => {
     if (!user) return;
