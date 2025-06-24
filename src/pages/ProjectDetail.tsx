@@ -213,9 +213,9 @@ const ProjectDetail: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 overflow-auto">
-      {/* Project Header - aligned with tabs and other sections */}
-      <div className="px-6 pb-4">
+    <div className="min-h-full flex flex-col">
+      {/* Project Header - scrollable content */}
+      <div className="px-6 py-4">
         <ProjectHeader 
           project={project}
           onUpdate={handleProjectUpdate}
@@ -223,7 +223,7 @@ const ProjectDetail: React.FC = () => {
         />
       </div>
       
-      {/* Tabs - consistent padding */}
+      {/* Tabs - fixed position */}
       <div className="px-6 border-b border-gray-200">
         <ProjectTabs 
           activeTab={activeTab}
@@ -232,8 +232,8 @@ const ProjectDetail: React.FC = () => {
         />
       </div>
       
-      {/* Tab content */}
-      <div className="flex-1 flex flex-col">
+      {/* Tab content - flexible area */}
+      <div className="flex-1 flex flex-col min-h-0">
         {renderTabContent()}
       </div>
     </div>

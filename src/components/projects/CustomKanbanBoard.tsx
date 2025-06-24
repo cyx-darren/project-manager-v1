@@ -491,10 +491,10 @@ export const CustomKanbanBoard: React.FC<CustomKanbanBoardProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
-      <div className="flex-shrink-0 px-6 pt-6 pb-0">
-        <div className="flex justify-between items-center mb-6">
+      <div className="flex-shrink-0 px-6 py-4">
+        <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Task Board</h2>
             <p className="mt-1 text-sm text-gray-500">
@@ -527,63 +527,61 @@ export const CustomKanbanBoard: React.FC<CustomKanbanBoardProps> = ({
         </div>
       </div>
 
-      {/* Board Content */}
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-x-auto overflow-y-hidden">
-          <div className="flex gap-6 h-full px-6 pb-6" style={{ minWidth: `${(columns.length + 1) * 320}px` }}>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={customCollisionDetection}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragEnd={handleDragEnd}
-            >
-              {/* Column sortable context */}
-              <SortableContext items={columns.map(col => col.id)} strategy={horizontalListSortingStrategy}>
-                {columns.map((column) => (
-                  <CustomColumn
-                    key={column.id}
-                    column={column}
-                    tasks={tasksByColumn[column.id] || []}
-                    projectId={project.id}
-                    onTaskUpdated={handleTaskUpdated}
-                    onEditTask={handleEditTask}
-                    onTaskDeleted={handleTaskDeleted}
-                    onCreateTask={handleCreateTask}
-                    onColumnUpdated={handleColumnUpdated}
-                    onColumnDeleted={handleColumnDeleted}
-                    activeTaskId={activeId as string | null}
-                    overId={overId as string | null}
-                    canEditTasks={canEditTasks}
-                    canManageColumns={canManageColumns}
-                  />
-                ))}
-              </SortableContext>
-
-              {/* Add Column Button */}
-              {canManageColumns && (
-                <AddColumnButton
+      {/* Board Content - Fixed height with horizontal scroll */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 pb-6">
+        <div className="flex gap-6 h-full" style={{ minWidth: `${(columns.length + 1) * 320}px` }}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={customCollisionDetection}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            {/* Column sortable context */}
+            <SortableContext items={columns.map(col => col.id)} strategy={horizontalListSortingStrategy}>
+              {columns.map((column) => (
+                <CustomColumn
+                  key={column.id}
+                  column={column}
+                  tasks={tasksByColumn[column.id] || []}
                   projectId={project.id}
-                  onColumnCreated={handleColumnCreated}
-                  position={columns.length}
+                  onTaskUpdated={handleTaskUpdated}
+                  onEditTask={handleEditTask}
+                  onTaskDeleted={handleTaskDeleted}
+                  onCreateTask={handleCreateTask}
+                  onColumnUpdated={handleColumnUpdated}
+                  onColumnDeleted={handleColumnDeleted}
+                  activeTaskId={activeId as string | null}
+                  overId={overId as string | null}
+                  canEditTasks={canEditTasks}
+                  canManageColumns={canManageColumns}
+                />
+              ))}
+            </SortableContext>
+
+            {/* Add Column Button */}
+            {canManageColumns && (
+              <AddColumnButton
+                projectId={project.id}
+                onColumnCreated={handleColumnCreated}
+                position={columns.length}
+              />
+            )}
+
+            {/* Drag Overlay */}
+            <DragOverlay>
+              {activeTask && (
+                <DraggableTask
+                  task={activeTask}
+                  projectId={project.id}
+                  onTaskUpdated={() => {}}
+                  onEditTask={() => {}}
+                  isOverlay={true}
+                  canEdit={false}
                 />
               )}
-
-              {/* Drag Overlay */}
-              <DragOverlay>
-                {activeTask && (
-                  <DraggableTask
-                    task={activeTask}
-                    projectId={project.id}
-                    onTaskUpdated={() => {}}
-                    onEditTask={() => {}}
-                    isOverlay={true}
-                    canEdit={false}
-                  />
-                )}
-              </DragOverlay>
-            </DndContext>
-          </div>
+            </DragOverlay>
+          </DndContext>
         </div>
       </div>
 

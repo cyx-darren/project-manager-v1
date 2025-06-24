@@ -50,7 +50,7 @@ const Layout: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex bg-gray-50">
+    <div className="h-screen flex bg-gray-50">
       {/* Sidebar */}
       <Sidebar 
         isOpen={sidebarOpen} 
@@ -72,13 +72,9 @@ const Layout: React.FC = () => {
         
         {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-white">
-          <div className="h-full">
-            <div className="h-full">
-              <Breadcrumb />
-              <div className="h-full">
-                <Outlet />
-              </div>
-            </div>
+          <div className="min-h-full">
+            <Breadcrumb />
+            <Outlet />
           </div>
         </main>
       </div>

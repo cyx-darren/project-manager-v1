@@ -192,7 +192,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
       {/* Column Header */}
       <div 
         className={`
-          flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-lg flex-shrink-0
+          flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-lg
           ${isDraggedOver ? 'bg-blue-50' : ''}
         `}
         {...sortableAttributes}
@@ -300,7 +300,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
       </div>
 
       {/* Add Task Button */}
-      <div className="p-3 border-t border-gray-200 flex-shrink-0">
+      <div className="p-3 border-t border-gray-200">
         <button
           onClick={() => onCreateTask(column.id)}
           className="flex items-center gap-2 w-full p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors text-sm"
