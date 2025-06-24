@@ -26,6 +26,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  overflow: visible; /* Allow content to expand */
+  align-self: start; /* Prevent stretching to match tallest cell */
 }
 
 /* Remove duplicate borders */
@@ -243,8 +245,37 @@
 /* Task container */
 .task-container {
   min-height: 60px;
-  max-height: 80px;
-  overflow: hidden;
+  transition: height 0.3s ease;
+  overflow: visible; /* Changed from hidden to allow expansion */
+}
+
+.task-container.expanded {
+  height: auto;
+}
+
+/* See More/Less button styling */
+.see-more-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 2px;
+  transition: background-color 0.2s ease;
+  font-weight: 500;
+  text-align: center;
+}
+
+.see-more-btn:hover {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.see-more-btn:active {
+  background: #d1d5db;
 }
 
 /* Loading indicator */
@@ -373,6 +404,18 @@ html {
   .calendar-header-cell {
     padding: 8px 4px;
     font-size: 12px;
+  }
+  
+  /* Mobile-specific see more button */
+  .see-more-btn {
+    font-size: 10px;
+    padding: 1px 4px;
+    margin-top: 1px;
+  }
+  
+  /* Ensure task container works well on mobile */
+  .task-container {
+    min-height: 40px;
   }
 }
 

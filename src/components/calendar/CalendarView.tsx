@@ -2,21 +2,21 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   DndContext,
   DragOverlay,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
-import {
   useDraggable,
   useDroppable,
+  useSensors,
+  useSensor,
+  PointerSensor,
+  closestCenter,
+  type DragStartEvent,
+  type DragEndEvent,
 } from '@dnd-kit/core'
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
-import './calendar-responsive.css'
+import { Plus } from 'lucide-react'
 import type { Project, Task } from '../../types/supabase'
-import { getTaskStatusCounts } from '../../utils/calendarUtils'
-import { supabase } from '../../config/supabase'
-import { useToastContext } from '../../contexts/ToastContext'
+import "./calendar-responsive.css";
+import { getTaskStatusCounts } from "../../utils/calendarUtils";
+import { useTaskContext } from "../../contexts/TaskContext";
+import { useToastContext } from "../../contexts/ToastContext";
 
 interface CalendarViewProps {
   project: Project
@@ -36,6 +36,13 @@ interface CalendarTask {
 interface VisibleMonth {
   month: number
   year: number
+}
+
+interface CalendarFilters {
+  status: string[]
+  priority: string[]
+  assignee: string[]
+  showCompleted: boolean
 }
 
 // Draggable Task Component
@@ -105,6 +112,17 @@ const DroppableCalendarCell: React.FC<{
   onTaskClick?: (task: Task) => void
   onDateClick?: (date: Date) => void
 }> = ({ date, tasks, isCurrentMonth, showWeekends, onTaskClick, onDateClick }) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Handle responsive breakpoint
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+  
   // Create consistent date string format (YYYY-MM-DD) without timezone issues
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -119,6 +137,12 @@ const DroppableCalendarCell: React.FC<{
       date: date,
     },
   })
+
+  // Calculate visible tasks based on expansion state and responsive breakpoints
+  const maxInitialTasks = isMobile ? 2 : 3
+  const maxVisibleTasks = isExpanded ? tasks.length : maxInitialTasks
+  const visibleTasks = tasks.slice(0, maxVisibleTasks)
+  const hasMoreTasks = tasks.length > maxInitialTasks
 
   const isToday = () => {
     const today = new Date()
@@ -142,10 +166,19 @@ const DroppableCalendarCell: React.FC<{
     isOver ? 'drag-over bg-blue-50' : ''
   ].filter(Boolean).join(' ')
 
-  const handleCellClick = () => {
+  const handleCellClick = (e: React.MouseEvent) => {
+    // Don't trigger cell click if clicking on the see more/less button
+    if ((e.target as HTMLElement).classList.contains('see-more-btn')) {
+      return
+    }
     if (onDateClick) {
       onDateClick(date)
     }
+  }
+
+  const handleToggleExpansion = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsExpanded(!isExpanded)
   }
 
   return (
@@ -164,14 +197,28 @@ const DroppableCalendarCell: React.FC<{
         {date.getDate()}
       </div>
       
-      <div className="task-container space-y-1">
-        {tasks.map((task, index) => (
+      <div className={`task-container space-y-1 ${isExpanded ? 'expanded' : ''}`}>
+        {visibleTasks.map((task, index) => (
           <DraggableTask
             key={`${task.id}-${index}`}
             task={task}
             onTaskClick={onTaskClick}
           />
         ))}
+        
+        {/* Show "See More" / "See Less" button when appropriate */}
+        {hasMoreTasks && (
+          <button
+            className="see-more-btn"
+            onClick={handleToggleExpansion}
+            title={isExpanded ? 'Show less tasks' : `Show ${tasks.length - maxVisibleTasks} more tasks`}
+          >
+            {isExpanded 
+              ? 'See Less' 
+              : `See More (+${tasks.length - maxInitialTasks})`
+            }
+          </button>
+        )}
       </div>
     </div>
   )
@@ -434,14 +481,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   const [currentView, setCurrentView] = useState<'month' | 'week' | 'day' | 'agenda'>('month')
   const [isLoading, setIsLoading] = useState(false)
   const [draggedTask, setDraggedTask] = useState<CalendarTask | null>(null)
-  const [localTasks, setLocalTasks] = useState<Task[]>(tasks)
+  const [showFilters, setShowFilters] = useState(false)
+  const [filters, setFilters] = useState<CalendarFilters>({
+    status: [],
+    priority: [],
+    assignee: [],
+    showCompleted: true
+  })
 
   const { showSuccess, showError } = useToastContext()
-
-  // Update local tasks when props change
-  useEffect(() => {
-    setLocalTasks(tasks)
-  }, [tasks])
+  const { updateTask } = useTaskContext()
 
   // Initialize with current month and next month
   const currentDate = new Date()
@@ -503,7 +552,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     }
 
     // Find the task being dragged
-    const taskToUpdate = localTasks.find(task => task.id === draggedTaskId)
+    const taskToUpdate = tasks.find(task => task.id === draggedTaskId)
     if (!taskToUpdate) {
       console.error('Task not found:', draggedTaskId)
       showError('Task not found')
@@ -523,22 +572,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     setIsLoading(true)
 
     try {
-      // Save as date-only string to avoid timezone issues
-      const { error } = await supabase
-        .from('tasks')
-        .update({ due_date: cellDateStr }) // Save as YYYY-MM-DD string
-        .eq('id', draggedTaskId)
-
-      if (error) throw error
-
-      // Update local state
-      setLocalTasks(prevTasks => 
-        prevTasks.map(task => 
-          task.id === draggedTaskId
-            ? { ...task, due_date: cellDateStr }
-            : task
-        )
-      )
+      // Use TaskContext updateTask method for optimistic updates and synchronization
+      await updateTask(draggedTaskId, { due_date: cellDateStr })
 
       // Format date for display
       const displayDate = new Date(cellDateStr + 'T12:00:00').toLocaleDateString('en-US', {
@@ -594,8 +629,85 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
+  // Filter tasks based on current filters
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      // Status filter
+      if (filters.status.length > 0 && !filters.status.includes(task.status || 'todo')) {
+        return false
+      }
+      
+      // Priority filter
+      if (filters.priority.length > 0 && !filters.priority.includes(task.priority || 'medium')) {
+        return false
+      }
+      
+      // Assignee filter
+      if (filters.assignee.length > 0 && task.assignee_id && !filters.assignee.includes(task.assignee_id)) {
+        return false
+      }
+      
+      // Show completed filter
+      if (!filters.showCompleted && task.status === 'done') {
+        return false
+      }
+      
+      return true
+    })
+  }, [tasks, filters])
+
   // Calculate task statistics
-  const statusCounts = useMemo(() => getTaskStatusCounts(localTasks), [localTasks])
+  const statusCounts = useMemo(() => getTaskStatusCounts(filteredTasks), [filteredTasks])
+
+  // Get unique values for filter options
+  const filterOptions = useMemo(() => {
+    const statuses = [...new Set(tasks.map(task => task.status || 'todo'))]
+    const priorities = [...new Set(tasks.map(task => task.priority || 'medium'))]
+    const assignees = [...new Set(tasks.map(task => task.assignee_id).filter((id): id is string => Boolean(id)))]
+    
+    return {
+      statuses: statuses.sort(),
+      priorities: (['urgent', 'high', 'medium', 'low'] as const).filter(p => priorities.includes(p)),
+      assignees: assignees.sort()
+    }
+  }, [tasks])
+
+  // Filter update handlers
+  const toggleStatusFilter = (status: string) => {
+    setFilters(prev => ({
+      ...prev,
+      status: prev.status.includes(status)
+        ? prev.status.filter(s => s !== status)
+        : [...prev.status, status]
+    }))
+  }
+
+  const togglePriorityFilter = (priority: string) => {
+    setFilters(prev => ({
+      ...prev,
+      priority: prev.priority.includes(priority)
+        ? prev.priority.filter(p => p !== priority)
+        : [...prev.priority, priority]
+    }))
+  }
+
+  const toggleAssigneeFilter = (assignee: string) => {
+    setFilters(prev => ({
+      ...prev,
+      assignee: prev.assignee.includes(assignee)
+        ? prev.assignee.filter(a => a !== assignee)
+        : [...prev.assignee, assignee]
+    }))
+  }
+
+  const clearAllFilters = () => {
+    setFilters({
+      status: [],
+      priority: [],
+      assignee: [],
+      showCompleted: true
+    })
+  }
 
   const navigateToToday = () => {
     const today = new Date()
@@ -633,7 +745,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   // Mobile view
   if (isMobile) {
-    return <MobileCalendarList tasks={localTasks} onTaskClick={onTaskClick} />
+    return <MobileCalendarList tasks={filteredTasks} onTaskClick={onTaskClick} />
   }
 
   return (
@@ -685,6 +797,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               Show weekends
             </label>
             
+            <button 
+              className="px-3 py-1 text-sm border rounded hover:bg-gray-50 flex items-center gap-2"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              🔍 Filters
+              {(filters.status.length > 0 || filters.priority.length > 0 || filters.assignee.length > 0 || !filters.showCompleted) && (
+                <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5">
+                  {filters.status.length + filters.priority.length + filters.assignee.length + (!filters.showCompleted ? 1 : 0)}
+                </span>
+              )}
+            </button>
+            
             <div className="flex border rounded">
               <button 
                 className={`px-3 py-1 text-sm ${currentView === 'month' ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
@@ -714,6 +838,102 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           </div>
         </div>
 
+        {/* Filters Panel */}
+        {showFilters && (
+          <div className="filters-panel bg-gray-50 border rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-gray-900">Filters</h3>
+              <button 
+                className="text-sm text-blue-600 hover:text-blue-800"
+                onClick={clearAllFilters}
+              >
+                Clear All
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Status Filter */}
+              {filterOptions.statuses.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Status</h4>
+                  <div className="space-y-1">
+                    {filterOptions.statuses.map(status => (
+                      <label key={status} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={filters.status.includes(status)}
+                          onChange={() => toggleStatusFilter(status)}
+                          className="rounded"
+                        />
+                        <span className="capitalize">{status.replace('_', ' ')}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Priority Filter */}
+              {filterOptions.priorities.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Priority</h4>
+                  <div className="space-y-1">
+                    {filterOptions.priorities.map(priority => (
+                      <label key={priority} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={filters.priority.includes(priority)}
+                          onChange={() => togglePriorityFilter(priority)}
+                          className="rounded"
+                        />
+                        <span className="capitalize flex items-center gap-1">
+                          {priority === 'urgent' && '🔴'}
+                          {priority === 'high' && '🟡'}
+                          {priority === 'medium' && '🔵'}
+                          {priority === 'low' && '⚪'}
+                          {priority}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Assignee Filter */}
+              {filterOptions.assignees.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Assignee</h4>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {filterOptions.assignees.map(assignee => (
+                      <label key={assignee} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={filters.assignee.includes(assignee)}
+                          onChange={() => toggleAssigneeFilter(assignee)}
+                          className="rounded"
+                        />
+                        <span>{assignee}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Additional Options */}
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={filters.showCompleted}
+                  onChange={(e) => setFilters(prev => ({ ...prev, showCompleted: e.target.checked }))}
+                  className="rounded"
+                />
+                Show completed tasks
+              </label>
+            </div>
+          </div>
+        )}
+
         {/* Task Count Summary */}
         <div className="flex items-center gap-4 mb-4 text-sm">
           {statusCounts.todo > 0 && (
@@ -736,31 +956,112 @@ const CalendarView: React.FC<CalendarViewProps> = ({
           )}
         </div>
 
-        {/* Calendar Container with Continuous Scroll */}
+        {/* Calendar Container with View-based Content */}
         <div className="calendar-container">
-          {visibleMonths.map(({ month, year }) => (
-            <div key={`${year}-${month}`} className="month-section mb-8">
-              <h3 className="text-lg font-semibold mb-4">
-                {new Date(year, month).toLocaleDateString('en-US', { 
-                  month: 'long', 
-                  year: 'numeric' 
-                })}
-              </h3>
-              <CalendarMonth 
-                month={month} 
-                year={year}
-                tasks={getTasksForMonth(localTasks, month, year)}
-                showWeekends={showWeekends}
-                onTaskClick={onTaskClick}
-                onDateClick={onDateClick}
-              />
+          {currentView === 'month' && (
+            <>
+              {visibleMonths.map(({ month, year }) => (
+                <div key={`${year}-${month}`} className="month-section mb-8">
+                  <h3 className="text-lg font-semibold mb-4">
+                    {new Date(year, month).toLocaleDateString('en-US', { 
+                      month: 'long', 
+                      year: 'numeric' 
+                    })}
+                  </h3>
+                  <CalendarMonth 
+                    month={month} 
+                    year={year}
+                    tasks={getTasksForMonth(filteredTasks, month, year)}
+                    showWeekends={showWeekends}
+                    onTaskClick={onTaskClick}
+                    onDateClick={onDateClick}
+                  />
+                </div>
+              ))}
+              
+              {/* Loading indicator */}
+              {isLoading && (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                </div>
+              )}
+            </>
+          )}
+
+          {currentView === 'week' && (
+            <div className="week-view">
+              <div className="text-center text-gray-500 py-8">
+                <p>Week view is coming soon!</p>
+                <p className="text-sm mt-2">For now, please use Month view to see your tasks.</p>
+              </div>
             </div>
-          ))}
-          
-          {/* Loading indicator */}
-          {isLoading && (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          )}
+
+          {currentView === 'day' && (
+            <div className="day-view">
+              <div className="text-center text-gray-500 py-8">
+                <p>Day view is coming soon!</p>
+                <p className="text-sm mt-2">For now, please use Month view to see your tasks.</p>
+              </div>
+            </div>
+          )}
+
+          {currentView === 'agenda' && (
+            <div className="agenda-view">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Upcoming Tasks</h3>
+                {filteredTasks
+                  .filter(task => task.due_date)
+                  .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+                  .map(task => (
+                    <div 
+                      key={task.id} 
+                      className="agenda-item bg-white border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => onTaskClick?.(task)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{task.title}</h4>
+                          {task.description && (
+                            <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-gray-500">
+                            {new Date(task.due_date!).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              task.priority === 'urgent' ? 'bg-red-100 text-red-800' :
+                              task.priority === 'high' ? 'bg-yellow-100 text-yellow-800' :
+                              task.priority === 'medium' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {task.priority || 'medium'}
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              task.status === 'done' ? 'bg-green-100 text-green-800' :
+                              task.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {task.status?.replace('_', ' ') || 'todo'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                }
+                {filteredTasks.filter(task => task.due_date).length === 0 && (
+                  <div className="text-center text-gray-500 py-8">
+                    <p>No upcoming tasks with due dates.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

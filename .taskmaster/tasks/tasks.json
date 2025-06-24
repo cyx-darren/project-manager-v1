@@ -712,7 +712,7 @@
             "id": 6,
             "title": "Synchronize calendar with board view",
             "description": "Ensure that changes made in the calendar view are reflected in the board view and vice versa.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               3,
               4
@@ -724,7 +724,7 @@
             "id": 7,
             "title": "Implement calendar view customization options",
             "description": "Add options for users to customize the calendar view, such as changing the view type (month, week, day) or applying filters.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               3
             ],
@@ -984,7 +984,7 @@
     ],
     "metadata": {
       "created": "2025-06-19T00:44:28.142Z",
-      "updated": "2025-06-24T08:39:18.564Z",
+      "updated": "2025-06-24T10:40:21.418Z",
       "description": "Tasks for master context"
     }
   }
