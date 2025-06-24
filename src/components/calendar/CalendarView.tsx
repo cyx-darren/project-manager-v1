@@ -122,6 +122,47 @@ const DroppableCalendarCell: React.FC<{
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  // Sync row heights when tasks or expansion state changes
+  useEffect(() => {
+    const syncRowHeights = () => {
+      // Find all calendar grids on the page
+      const calendarGrids = document.querySelectorAll('.calendar-grid')
+      
+      calendarGrids.forEach(grid => {
+        const cells = Array.from(grid.querySelectorAll('.calendar-cell'))
+        const columns = showWeekends ? 7 : 5
+        
+        // Group cells into rows
+        for (let i = 0; i < cells.length; i += columns) {
+          const rowCells = cells.slice(i, i + columns)
+          let maxHeight = 0
+          
+          // Reset heights and find the tallest cell in the row
+          rowCells.forEach(cell => {
+            (cell as HTMLElement).style.height = 'auto'
+            maxHeight = Math.max(maxHeight, (cell as HTMLElement).offsetHeight)
+          })
+          
+          // Set all cells in the row to the same height
+          rowCells.forEach(cell => {
+            (cell as HTMLElement).style.height = `${maxHeight}px`
+          })
+        }
+      })
+    }
+    
+    // Use a small delay to ensure DOM has updated after expansion
+    const timeoutId = setTimeout(syncRowHeights, 10)
+    
+    // Also sync on window resize
+    window.addEventListener('resize', syncRowHeights)
+    
+    return () => {
+      clearTimeout(timeoutId)
+      window.removeEventListener('resize', syncRowHeights)
+    }
+  }, [tasks, isExpanded, showWeekends])
   
   // Create consistent date string format (YYYY-MM-DD) without timezone issues
   const year = date.getFullYear()

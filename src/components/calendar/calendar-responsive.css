@@ -1,10 +1,12 @@
 /* Asana-style Calendar with Subtle Borders */
 
-/* Calendar Grid - Updated for CSS Grid Layout */
+/* Calendar Grid - Updated for CSS Grid Layout with Equal Row Heights */
 .calendar-grid {
   display: grid;
   width: 100%;
   border: 1px solid #e5e7eb;
+  grid-auto-rows: 1fr; /* Ensure all rows have equal height */
+  align-items: stretch; /* Stretch all cells to fill the row height */
 }
 
 /* Grid columns for weekends shown/hidden */
@@ -20,6 +22,7 @@
 .calendar-cell {
   border: 1px solid #e5e7eb; /* Light gray border */
   min-height: 100px;
+  height: 100%; /* Fill the entire grid cell height */
   padding: 8px;
   background: white;
   transition: background-color 0.2s ease;
@@ -27,7 +30,7 @@
   display: flex;
   flex-direction: column;
   overflow: visible; /* Allow content to expand */
-  align-self: start; /* Prevent stretching to match tallest cell */
+  /* Removed align-self: start to allow stretching */
 }
 
 /* Remove duplicate borders */
@@ -55,6 +58,7 @@
 /* Weekend cells with subtle gray background */
 .calendar-cell.weekend {
   background-color: #f9fafb;
+  height: 100%; /* Ensure weekend shading fills entire cell */
 }
 
 /* Date numbers */
