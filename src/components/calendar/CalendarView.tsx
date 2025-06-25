@@ -214,7 +214,7 @@ const DroppableCalendarCell: React.FC<{
               {date.toLocaleDateString('en-US', { month: 'short' })}
             </span>
             <span className={`font-semibold ${isToday() ? '' : 'text-gray-900'}`}>
-              {date.getDate()}
+        {date.getDate()}
             </span>
           </div>
         ) : (
@@ -356,12 +356,33 @@ const getCalendarDays = (month: number, year: number): Date[] => {
 }
 
 // Get tasks for a specific month
+// Get tasks for a specific month INCLUDING tasks that might appear in edge cells
 const getTasksForMonth = (tasks: Task[], month: number, year: number): CalendarTask[] => {
+  // Get the date range that will be displayed in this month's calendar
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  
+  // Calculate the actual calendar start date (including previous month's trailing days)
+  const calendarStartDate = new Date(firstDay)
+  calendarStartDate.setDate(calendarStartDate.getDate() - calendarStartDate.getDay())
+  
+  // Calculate the actual calendar end date (including next month's leading days)
+  const calendarEndDate = new Date(lastDay)
+  const daysToAdd = 6 - calendarEndDate.getDay()
+  if (daysToAdd > 0) {
+    calendarEndDate.setDate(calendarEndDate.getDate() + daysToAdd)
+  }
+  
+  console.log(`Filtering tasks for calendar range: ${calendarStartDate.toISOString()} to ${calendarEndDate.toISOString()}`)
+  
   return tasks
     .filter(task => {
       if (!task.due_date) return false
-      const taskDate = new Date(task.due_date)
-      return taskDate.getMonth() === month && taskDate.getFullYear() === year
+      
+      const taskDate = new Date(task.due_date + (task.due_date.includes('T') ? '' : 'T12:00:00'))
+      
+      // Include tasks that fall within the visible calendar range
+      return taskDate >= calendarStartDate && taskDate <= calendarEndDate
     })
     .map(task => ({
       id: task.id,
@@ -505,13 +526,13 @@ const CalendarMonth: React.FC<{
       {isFirst && (
         <div className="calendar-header grid grid-cols-7 text-center font-semibold bg-gray-50 border-b-2 border-gray-200">
           <div className={`py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide ${!showWeekends ? 'opacity-0 pointer-events-none' : ''}`}>Sun</div>
-          <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Mon</div>
-          <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Tue</div>
-          <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Wed</div>
-          <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Thu</div>
-          <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Fri</div>
+            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Mon</div>
+            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Tue</div>
+            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Wed</div>
+            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Thu</div>
+            <div className="py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide">Fri</div>
           <div className={`py-3 text-sm font-semibold text-gray-700 uppercase tracking-wide ${!showWeekends ? 'opacity-0 pointer-events-none' : ''}`}>Sat</div>
-        </div>
+      </div>
       )}
       
       {/* Calendar grid */}
@@ -568,7 +589,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   const { showSuccess, showError } = useToastContext()
   const { updateTask } = useTaskContext()
-  
+
   // Refs
   const calendarContainerRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
@@ -624,7 +645,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   // Simplified loading state management - single direction state
   const [loadingDirection, setLoadingDirection] = useState<'top' | 'bottom' | null>(null)
-  
+
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -698,8 +719,32 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       // Use TaskContext updateTask method for optimistic updates and synchronization
       await updateTask(draggedTaskId, { due_date: cellDateStr })
 
+      // Check if the target month is in visible months
+      const targetDate = new Date(cellDateStr + 'T12:00:00')
+      const targetYear = targetDate.getFullYear()
+      const targetMonth = targetDate.getMonth()
+      
+      const monthExists = visibleMonths.some(vm => 
+        vm.year === targetYear && vm.month === targetMonth
+      )
+      
+      // If the month isn't visible, add it
+      if (!monthExists) {
+        console.log('Adding month to visible months:', targetMonth + 1, targetYear)
+        setVisibleMonths(prev => {
+          const newMonths = [...prev]
+          // Add the month in the correct position
+          newMonths.push({ month: targetMonth, year: targetYear })
+          // Sort by year and month
+          return newMonths.sort((a, b) => {
+            if (a.year !== b.year) return a.year - b.year
+            return a.month - b.month
+          })
+        })
+      }
+
       // Format date for display
-      const displayDate = new Date(cellDateStr + 'T12:00:00').toLocaleDateString('en-US', {
+      const displayDate = targetDate.toLocaleDateString('en-US', {
         month: 'numeric',
         day: 'numeric',
         year: 'numeric'
@@ -837,7 +882,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
         // Update current visible month based on the most visible section
         if (mostVisibleEntry && mostVisibleEntry.target instanceof HTMLElement) {
-          const element = mostVisibleEntry.target
+          const element = mostVisibleEntry.target as HTMLElement
           const monthData = element.getAttribute('data-month')
           if (monthData) {
             const [year, month] = monthData.split('-').map(Number)
@@ -1044,53 +1089,53 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         >
           {/* Calendar Navigation */}
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4">
               <h2 className="text-xl font-semibold text-gray-900">
                 {new Date(currentVisibleMonth.year, currentVisibleMonth.month).toLocaleDateString('en-US', { 
-                  month: 'long', 
-                  year: 'numeric' 
-                })}
-              </h2>
+                month: 'long', 
+                year: 'numeric' 
+              })}
+            </h2>
               
               <div className="flex items-center gap-2">
-                <button
-                  onClick={navigateToToday}
+              <button 
+                onClick={navigateToToday}
                   className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                >
-                  Today
-                </button>
-                <button
-                  onClick={navigatePrevious}
+              >
+                Today
+              </button>
+              <button 
+                onClick={navigatePrevious}
                   className="p-1 hover:bg-gray-100 rounded transition-colors"
                   aria-label="Previous month"
-                >
+              >
                   <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={navigateNext}
+              </button>
+              <button 
+                onClick={navigateNext}
                   className="p-1 hover:bg-gray-100 rounded transition-colors"
                   aria-label="Next month"
-                >
+              >
                   <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
+              </button>
             </div>
-            
+          </div>
+          
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
                 className="flex items-center gap-2 px-3 py-1 text-sm border rounded hover:bg-gray-50 transition-colors"
               >
                 <Filter className="w-4 h-4" />
                 Filters
               </button>
-            </div>
           </div>
+        </div>
 
           {/* View Tabs */}
           <div className="flex border-b">
             {(['month', 'week', 'day', 'agenda'] as const).map((view) => (
-              <button
+              <button 
                 key={view}
                 onClick={() => setCurrentView(view)}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
@@ -1101,25 +1146,25 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               >
                 {view}
               </button>
-            ))}
-          </div>
+                    ))}
+                  </div>
 
           {/* Filters Panel */}
           {showFilters && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
+                        <input
+                          type="checkbox"
                     checked={showWeekends}
                     onChange={(e) => setShowWeekends(e.target.checked)}
-                    className="rounded"
-                  />
+                          className="rounded"
+                        />
                   Show Weekends
-                </label>
-              </div>
-            </div>
-          )}
+                      </label>
+                  </div>
+                </div>
+              )}
         </div>
 
         {/* Scrollable Calendar Container with Dynamic Height */}
@@ -1139,19 +1184,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               <div className="flex items-center space-x-2 text-blue-600">
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
                 <span className="text-sm font-medium">Loading previous months...</span>
-              </div>
-            </div>
-          )}
-          
+                  </div>
+                </div>
+              )}
+
           {/* Scroll hint at top */}
           {loadingDirection !== 'top' && (
             <div className="sticky top-0 z-5 bg-gradient-to-b from-gray-50 to-transparent h-6 flex items-start justify-center pt-1">
               <div className="text-xs text-gray-400 flex items-center gap-1">
                 <ChevronUp className="w-3 h-3" />
                 Scroll up for previous months
-              </div>
             </div>
-          )}
+          </div>
+        )}
 
           {/* Calendar Content */}
           {currentView === 'month' && (
@@ -1165,7 +1210,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
                 >
                   <CalendarMonth 
                     month={month} 
-                    year={year} 
+                    year={year}
                     tasks={getTasksForMonth(filteredTasks, month, year)}
                     showWeekends={showWeekends}
                     isFirst={index === 0}
@@ -1176,7 +1221,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               ))}
             </>
           )}
-          
+
           {/* Loading indicator for bottom */}
           {loadingDirection === 'bottom' && (
             <div className="absolute bottom-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-t p-3 flex items-center justify-center">
@@ -1186,7 +1231,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               </div>
             </div>
           )}
-          
+
           {/* Scroll hint at bottom */}
           {loadingDirection !== 'bottom' && (
             <div className="sticky bottom-0 z-5 bg-gradient-to-t from-gray-50 to-transparent h-6 flex items-end justify-center pb-1">

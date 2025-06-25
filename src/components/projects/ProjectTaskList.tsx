@@ -97,8 +97,8 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
       onNewTaskClick()
     } else {
       // Fallback to modal if URL navigation not available
-      setEditingTask(null)
-      setIsTaskModalOpen(true)
+    setEditingTask(null)
+    setIsTaskModalOpen(true)
     }
   }
 
@@ -107,8 +107,8 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
       onTaskClick(task, 'edit')
     } else {
       // Fallback to modal if URL navigation not available
-      setEditingTask(task)
-      setIsTaskModalOpen(true)
+    setEditingTask(task)
+    setIsTaskModalOpen(true)
     }
   }
 
