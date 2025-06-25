@@ -140,6 +140,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     return date.toLocaleDateString()
   }
 
+  // Handle task card click for URL navigation
+  const handleTaskCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on action buttons or drag handles
+    if ((e.target as HTMLElement).closest('button') || 
+        (e.target as HTMLElement).closest('[data-drag-handle]')) {
+      return
+    }
+    
+    // Navigate to task if onEditTask is provided (URL navigation)
+    if (onEditTask && !isDragOverlay) {
+      e.preventDefault()
+      e.stopPropagation()
+      onEditTask(task)
+    }
+  }
+
   return (
     <div
       className={`
@@ -148,9 +164,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           ? 'shadow-2xl transform rotate-3 scale-110 bg-blue-50 border-blue-300' 
           : 'hover:shadow-lg hover:border-gray-300 hover:-translate-y-1'
         }
+        ${onEditTask && !isDragOverlay ? 'cursor-pointer' : ''}
         transition-all duration-300 ease-out
         ${className}
       `}
+      onClick={handleTaskCardClick}
     >
       {/* Header with drag handle, title and action buttons */}
       <div className="flex items-start gap-2">
@@ -158,6 +176,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <DragHandle 
           listeners={dragListeners}
           disabled={!canEditTasks || isDragOverlay}
+          data-drag-handle="true"
         />
         
         {/* Title */}

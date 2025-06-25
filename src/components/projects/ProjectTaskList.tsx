@@ -11,12 +11,16 @@ interface ProjectTaskListProps {
   project: Project
   tasks: Task[]
   onTasksUpdate: (tasks: Task[]) => void
+  onTaskClick?: (task: Task, mode?: 'view' | 'edit') => void
+  onNewTaskClick?: (dueDate?: string) => void
 }
 
 export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
   project,
   tasks: propTasks, // Keep for backward compatibility
-  onTasksUpdate
+  onTasksUpdate,
+  onTaskClick,
+  onNewTaskClick
 }) => {
 
   const { tasks, deleteTask } = useTaskContext()
@@ -89,13 +93,23 @@ export const ProjectTaskList: React.FC<ProjectTaskListProps> = ({
   }
 
   const handleCreateTask = () => {
-    setEditingTask(null)
-    setIsTaskModalOpen(true)
+    if (onNewTaskClick) {
+      onNewTaskClick()
+    } else {
+      // Fallback to modal if URL navigation not available
+      setEditingTask(null)
+      setIsTaskModalOpen(true)
+    }
   }
 
   const handleEditTask = (task: Task) => {
-    setEditingTask(task)
-    setIsTaskModalOpen(true)
+    if (onTaskClick) {
+      onTaskClick(task, 'edit')
+    } else {
+      // Fallback to modal if URL navigation not available
+      setEditingTask(task)
+      setIsTaskModalOpen(true)
+    }
   }
 
   const handleTaskCreated = (newTask: Task) => {

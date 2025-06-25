@@ -33,6 +33,7 @@ interface TaskModalProps {
   task?: Task | null;
   teamMembers?: Array<{ id: string; email: string; name?: string }>;
   initialDueDate?: string | null;
+  mode?: 'view' | 'edit';
 }
 
 const TaskModal: React.FC<TaskModalProps> = ({
@@ -43,7 +44,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
   projectId,
   task,
   teamMembers = [],
-  initialDueDate = null
+  initialDueDate = null,
+  mode = 'edit'
 }) => {
   const { user } = useAuth();
   const { createTask, updateTask } = useTaskContext();

@@ -7,6 +7,7 @@ import { useDebounce } from '../../hooks/useDebounce'
 import { searchService } from '../../services/searchService'
 import SearchResults from './SearchResults'
 import type { SearchResult } from '../../contexts/SearchContext'
+import { generateTaskUrl, generateProjectTabUrl } from '../../utils/urlHelpers'
 
 interface GlobalSearchProps {
   placeholder?: string
@@ -149,9 +150,11 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
     try {
       // Navigate to the appropriate page
       if (result.type === 'project') {
-        navigate(`/projects/${result.id}`)
+        navigate(generateProjectTabUrl(result.id, 'overview'))
       } else if (result.type === 'task' && result.project) {
-        navigate(`/projects/${result.project.id}`)
+        // Navigate to task URL with proper context
+        const taskUrl = generateTaskUrl(result.project.id, 'tasks', result.id, { mode: 'view' })
+        navigate(taskUrl)
       }
       
       // Close search and clear after navigation

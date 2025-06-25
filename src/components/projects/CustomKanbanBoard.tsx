@@ -31,11 +31,13 @@ import { useAuth } from '../../contexts/AuthContext'
 interface CustomKanbanBoardProps {
   project: Project
   onTasksUpdate?: (tasks: Task[]) => void
+  onTaskClick?: (task: Task, mode?: 'view' | 'edit') => void
 }
 
 export const CustomKanbanBoard: React.FC<CustomKanbanBoardProps> = ({
   project,
-  onTasksUpdate
+  onTasksUpdate,
+  onTaskClick
 }) => {
   // State
   const [columns, setColumns] = useState<BoardColumn[]>([])
@@ -415,9 +417,15 @@ export const CustomKanbanBoard: React.FC<CustomKanbanBoardProps> = ({
   }, [handleTaskUpdated])
 
   const handleEditTask = useCallback((task: Task) => {
-    setSelectedTask(task)
-    setIsEditModalOpen(true)
-  }, [])
+    if (onTaskClick) {
+      // Use URL navigation if available
+      onTaskClick(task, 'edit')
+    } else {
+      // Fallback to modal if URL navigation not available
+      setSelectedTask(task)
+      setIsEditModalOpen(true)
+    }
+  }, [onTaskClick])
 
   // Column handlers
   const handleColumnCreated = useCallback((newColumn: BoardColumn) => {
