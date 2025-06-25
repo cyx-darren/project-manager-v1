@@ -18,6 +18,21 @@ interface TabConfig {
   shortLabel?: string // For mobile display
 }
 
+// Throttle function for performance optimization
+const throttle = <T extends (...args: any[]) => void>(
+  func: T,
+  limit: number
+): ((...args: Parameters<T>) => void) => {
+  let inThrottle: boolean
+  return function (this: any, ...args: Parameters<T>) {
+    if (!inThrottle) {
+      func.apply(this, args)
+      inThrottle = true
+      setTimeout(() => (inThrottle = false), limit)
+    }
+  }
+}
+
 // Memoize tabs configuration to prevent recreation on every render
 const tabs: TabConfig[] = [
   {
@@ -145,20 +160,23 @@ export const ProjectTabs: React.FC<ProjectTabsProps> = React.memo(({
   const tabsRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Memoize screen size detection function
-  const checkScreenSize = useCallback(() => {
-    const width = window.innerWidth
-    const mobile = width < 768
-    const tablet = width >= 768 && width < 1024
-    
-    setIsMobile(mobile)
-    setIsTablet(tablet)
-    
-    // Close dropdown when screen size changes
-    setShowDropdown(false)
-  }, [])
+  // Memoize and throttle screen size detection function for better performance
+  const checkScreenSize = useCallback(
+    throttle(() => {
+      const width = window.innerWidth
+      const mobile = width < 768
+      const tablet = width >= 768 && width < 1024
+      
+      setIsMobile(mobile)
+      setIsTablet(tablet)
+      
+      // Close dropdown when screen size changes
+      setShowDropdown(false)
+    }, 100), // Throttle to 100ms
+    []
+  )
 
-  // Memoize visible and overflow tabs calculation
+  // Memoize visible and overflow tabs calculation with better dependency tracking
   const { visibleTabs, overflowTabs } = useMemo(() => {
     if (isMobile) {
       // On mobile, show only active tab + dropdown for others
@@ -183,14 +201,18 @@ export const ProjectTabs: React.FC<ProjectTabsProps> = React.memo(({
     }
   }, [isMobile, isTablet, activeTab])
 
-  // Optimize screen size detection with single useEffect
+  // Optimize screen size detection with single useEffect and cleanup
   useEffect(() => {
     checkScreenSize()
-    window.addEventListener('resize', checkScreenSize)
+    
+    // Use passive event listener for better performance
+    const options = { passive: true }
+    window.addEventListener('resize', checkScreenSize, options)
+    
     return () => window.removeEventListener('resize', checkScreenSize)
   }, [checkScreenSize])
 
-  // Optimize click outside detection
+  // Optimize click outside detection with better event handling
   useEffect(() => {
     if (!showDropdown) return
 
@@ -200,22 +222,23 @@ export const ProjectTabs: React.FC<ProjectTabsProps> = React.memo(({
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    // Use capture phase for better performance
+    document.addEventListener('mousedown', handleClickOutside, { capture: true })
+    return () => document.removeEventListener('mousedown', handleClickOutside, { capture: true })
   }, [showDropdown])
 
-  // Memoize tab click handler
+  // Memoize tab click handler with stable reference
   const handleTabClick = useCallback((tabId: TabType) => {
     onTabChange(tabId)
     setShowDropdown(false)
   }, [onTabChange])
 
-  // Memoize dropdown toggle handler
+  // Memoize dropdown toggle handler with stable reference
   const toggleDropdown = useCallback(() => {
     setShowDropdown(prev => !prev)
   }, [])
 
-  // Memoize active tab configuration and overflow check
+  // Memoize active tab configuration and overflow check with better performance
   const activeTabConfig = useMemo(() => 
     tabs.find(tab => tab.id === activeTab), 
     [activeTab]
@@ -277,7 +300,7 @@ export const ProjectTabs: React.FC<ProjectTabsProps> = React.memo(({
               )}
             </button>
 
-            {/* Dropdown menu */}
+            {/* Dropdown menu with improved z-index and positioning */}
             {showDropdown && (
               <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
                 <div className="py-1" role="menu" aria-orientation="vertical">

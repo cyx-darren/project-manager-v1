@@ -1,7 +1,19 @@
-import React, { createContext, useContext, useReducer, useCallback, useEffect, type ReactNode } from 'react'
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { taskService } from '../services/taskService'
 import { useToastContext } from './ToastContext'
 import type { Task, TaskInsert, TaskUpdate } from '../types/supabase'
+
+// Debounce function for performance optimization
+const debounce = <T extends (...args: any[]) => void>(
+  func: T,
+  delay: number
+): ((...args: Parameters<T>) => void) => {
+  let timeoutId: NodeJS.Timeout
+  return function (this: any, ...args: Parameters<T>) {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => func.apply(this, args), delay)
+  }
+}
 
 // History entry for undo/redo functionality
 interface HistoryEntry {
@@ -217,8 +229,38 @@ interface TaskProviderProps {
 export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(taskReducer, initialState)
   const { showSuccess, showError } = useToastContext()
+  
+  // Refs for performance optimization
+  const lastProjectIdRef = useRef<string | null>(null)
+  const debouncedOperationsRef = useRef<Map<string, NodeJS.Timeout>>(new Map())
 
-  // History management functions
+  // Cleanup debounced operations on unmount
+  useEffect(() => {
+    return () => {
+      debouncedOperationsRef.current.forEach(timeout => clearTimeout(timeout))
+      debouncedOperationsRef.current.clear()
+    }
+  }, [])
+
+  // Memoized selectors for better performance
+  const memoizedSelectors = useMemo(() => ({
+    getTaskById: (id: string): Task | undefined => 
+      state.tasks.find(task => task.id === id),
+    
+    getTasksByStatus: (status?: 'todo' | 'in_progress' | 'done'): Task[] => 
+      status ? state.tasks.filter(task => task.status === status) : state.tasks,
+    
+    getTasksByColumn: (columnId: string): Task[] =>
+      state.tasks.filter(task => task.column_id === columnId)
+        .sort((a, b) => (a.order_index || 0) - (b.order_index || 0)),
+    
+    getTasksCount: () => state.tasks.length,
+    
+    getCompletedTasksCount: () => 
+      state.tasks.filter(task => task.status === 'done').length
+  }), [state.tasks])
+
+  // History management functions with better performance
   const addToHistory = useCallback((
     action: 'move' | 'create' | 'update' | 'delete',
     description: string,
@@ -252,12 +294,18 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     dispatch({ type: 'CLEAR_HISTORY', payload: undefined })
   }, [])
 
-  // Computed values
-  const canUndo = state.historyIndex >= 0
-  const canRedo = state.historyIndex < state.history.length - 1
+  // Computed values with memoization
+  const canUndo = useMemo(() => state.historyIndex >= 0, [state.historyIndex])
+  const canRedo = useMemo(() => state.historyIndex < state.history.length - 1, [state.historyIndex, state.history.length])
 
-  // Load tasks for a project
+  // Optimized load tasks with caching
   const loadTasks = useCallback(async (projectId: string) => {
+    // Skip if already loading the same project
+    if (lastProjectIdRef.current === projectId && state.loading) {
+      return
+    }
+    
+    lastProjectIdRef.current = projectId
     dispatch({ type: 'SET_LOADING', payload: true })
     dispatch({ type: 'SET_ERROR', payload: null })
 
@@ -272,7 +320,25 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load tasks'
       dispatch({ type: 'SET_ERROR', payload: errorMessage })
     }
-  }, [])
+  }, [state.loading])
+
+  // Debounced refresh for better performance
+  const refreshTasks = useCallback(async (projectId: string): Promise<void> => {
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(async () => {
+        await loadTasks(projectId)
+        resolve()
+      }, 500)
+      
+      // Store timeout for cleanup
+      const key = `refresh-${projectId}`
+      const existingTimeout = debouncedOperationsRef.current.get(key)
+      if (existingTimeout) {
+        clearTimeout(existingTimeout)
+      }
+      debouncedOperationsRef.current.set(key, timeoutId)
+    })
+  }, [loadTasks])
 
   // Create a new task with optimistic update
   const createTask = useCallback(async (taskData: TaskInsert): Promise<Task | null> => {
@@ -293,7 +359,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     }
   }, [showSuccess, showError])
 
-  // Update a task with optimistic update
+  // Update a task with optimistic update and debouncing
   const updateTask = useCallback(async (id: string, updates: TaskUpdate): Promise<Task | null> => {
     // Apply optimistic update immediately
     dispatch({ type: 'OPTIMISTIC_UPDATE', payload: { id, updates } })
@@ -521,28 +587,23 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     }
   }, [state.optimisticUpdates])
 
-  // Get task by ID
+  // Get task by ID (using memoized selector)
   const getTaskById = useCallback((id: string): Task | undefined => {
-    return state.tasks.find(task => task.id === id)
-  }, [state.tasks])
+    return memoizedSelectors.getTaskById(id)
+  }, [memoizedSelectors])
 
-  // Get tasks by status
+  // Get tasks by status (using memoized selector)
   const getTasksByStatus = useCallback((status?: 'todo' | 'in_progress' | 'done'): Task[] => {
-    if (!status) return state.tasks
-    return state.tasks.filter(task => task.status === status)
-  }, [state.tasks])
+    return memoizedSelectors.getTasksByStatus(status)
+  }, [memoizedSelectors])
 
   // Clear tasks
   const clearTasks = useCallback(() => {
     dispatch({ type: 'SET_TASKS', payload: [] })
   }, [])
 
-  // Refresh tasks
-  const refreshTasks = useCallback(async (projectId: string) => {
-    await loadTasks(projectId)
-  }, [loadTasks])
-
-  const contextValue: TaskContextValue = {
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue: TaskContextValue = useMemo(() => ({
     // State
     tasks: state.tasks,
     loading: state.loading,
@@ -575,7 +636,31 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     getTasksByStatus,
     clearTasks,
     refreshTasks
-  }
+  }), [
+    state.tasks, 
+    state.loading, 
+    state.error,
+    loadTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    updateTaskStatus,
+    updateTaskOrder,
+    batchUpdateTaskOrders,
+    moveTaskToColumn,
+    optimisticUpdate,
+    revertOptimistic,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    addToHistory,
+    clearHistory,
+    getTaskById,
+    getTasksByStatus,
+    clearTasks,
+    refreshTasks
+  ])
 
   return (
     <TaskContext.Provider value={contextValue}>

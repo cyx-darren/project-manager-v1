@@ -816,7 +816,154 @@
           6
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design database schema for multi-user collaboration",
+            "description": "Update the Supabase database schema to support multi-user collaboration features",
+            "dependencies": [],
+            "details": "Add new tables for user roles, permissions, and collaborative document versions. Modify existing tables to include user ownership and sharing information.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement user authentication and authorization system",
+            "description": "Set up user authentication and authorization using Supabase Auth",
+            "dependencies": [
+              1
+            ],
+            "details": "Integrate Supabase Auth for user sign-up, login, and session management. Implement role-based access control (RBAC) for different user permissions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Create API endpoints for collaborative features",
+            "description": "Develop new API endpoints to handle multi-user collaboration operations",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Implement RESTful API endpoints for document sharing, user invitations, and permission management using Supabase functions or serverless functions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement real-time data synchronization",
+            "description": "Set up real-time updates for collaborative document editing",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Use Supabase real-time subscriptions to implement live updates. Develop a client-side system to handle incoming real-time events and update the UI accordingly.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Develop conflict resolution mechanism",
+            "description": "Create a system to detect and resolve conflicts in collaborative editing",
+            "dependencies": [
+              4
+            ],
+            "details": "Implement Operational Transformation (OT) or Conflict-free Replicated Data Types (CRDTs) for handling concurrent edits. Develop merge strategies for conflicting changes.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Create UI components for user management",
+            "description": "Develop React components for user invitation and management",
+            "dependencies": [
+              2
+            ],
+            "details": "Create UI components for inviting users, managing permissions, and displaying user roles. Implement forms for user invitation and role assignment.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Implement document sharing UI",
+            "description": "Develop UI components for sharing documents and managing access",
+            "dependencies": [
+              3,
+              6
+            ],
+            "details": "Create a modal or sidebar for sharing documents, setting permissions, and inviting collaborators. Implement UI for displaying current document collaborators and their roles.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "Develop real-time collaboration UI",
+            "description": "Create UI components to display real-time updates and user presence",
+            "dependencies": [
+              4,
+              7
+            ],
+            "details": "Implement UI elements to show which users are currently editing the document. Create visual indicators for real-time changes and cursor positions of other users.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 9,
+            "title": "Implement version history and rollback feature",
+            "description": "Develop a system for tracking document versions and allowing rollbacks",
+            "dependencies": [
+              1,
+              3,
+              5
+            ],
+            "details": "Create a version history system in the database. Implement UI and API endpoints for viewing document history and reverting to previous versions.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 10,
+            "title": "Develop notification system for collaborative events",
+            "description": "Implement notifications for user actions and document changes",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Create a notification system to alert users of new collaborators, permission changes, and significant document updates. Implement both in-app and email notifications.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 11,
+            "title": "Implement user activity logging",
+            "description": "Create a system to log and display user activities within collaborative documents",
+            "dependencies": [
+              1,
+              3,
+              4
+            ],
+            "details": "Develop a logging system to track user actions such as edits, comments, and permission changes. Create UI components to display activity logs and filter by user or action type.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 12,
+            "title": "Perform security audit and optimization",
+            "description": "Conduct a security review and optimize performance for multi-user collaboration",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              9,
+              10,
+              11
+            ],
+            "details": "Review and enhance security measures for data access and transmission. Optimize database queries and real-time updates for improved performance with multiple concurrent users.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 10,
@@ -889,11 +1036,11 @@
             "id": 6,
             "title": "Performance optimization",
             "description": "Optimize the performance of the ProjectTabs component and navigation system.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               4
             ],
-            "details": "Profile the performance of the ProjectTabs component, especially when switching between views. Identify and fix any performance bottlenecks. Ensure that view switching is smooth and responsive, even for projects with large amounts of data.",
+            "details": "Profile the performance of the ProjectTabs component, especially when switching between views. Identify and fix any performance bottlenecks. Ensure that view switching is smooth and responsive, even for projects with large amounts of data.\n<info added on 2025-06-25T04:16:49.869Z>\nCompleted performance optimizations for ProjectTabs component and navigation system:\n\nIMPLEMENTED OPTIMIZATIONS:\n\n1. **Lazy Loading**: Implemented React.lazy() for all tab components (ProjectOverview, ProjectTaskList, ProjectTeam, CalendarView, CustomKanbanBoard) to reduce initial bundle size and improve loading performance.\n\n2. **Tab Content Virtualization**: Created TabContentManager component that renders all tabs but only displays the active one, preventing re-mounting and preserving component state during tab switches.\n\n3. **Enhanced ProjectTabs Performance**:\n   - Added throttled resize handling (100ms) for better performance during window resizing\n   - Implemented passive event listeners for resize events\n   - Used capture phase for click outside detection\n   - Better memoization of tab configurations and calculations\n   - Optimized dropdown positioning and z-index management\n\n4. **TaskContext Performance Improvements**:\n   - Added memoized selectors for frequently accessed data (getTaskById, getTasksByStatus, etc.)\n   - Implemented debounced refresh operations (500ms) to prevent excessive API calls\n   - Added project ID caching to prevent duplicate loading requests\n   - Optimized state updates with better dependency tracking\n   - Memoized context value to prevent unnecessary re-renders\n\n5. **Memory Management**:\n   - Added cleanup for debounced operations on unmount\n   - Implemented proper timeout management for async operations\n   - Better garbage collection for optimistic updates\n\n6. **UI Performance**:\n   - Added will-change CSS property for active tabs during transitions\n   - Improved loading states with better UX (spinner + text)\n   - Optimized component re-rendering with React.memo and better prop dependencies\n\nThese optimizations significantly improve tab switching performance, reduce memory usage, and provide a smoother user experience especially for projects with large amounts of data.\n</info added on 2025-06-25T04:16:49.869Z>",
             "testStrategy": ""
           },
           {
@@ -991,7 +1138,132 @@
           10
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement consistent loading states across all components",
+            "description": "Design and implement standardized loading indicators for all asynchronous operations in the application",
+            "dependencies": [],
+            "details": "Create reusable loading components (spinners, skeletons, progress bars) and apply them consistently across all data fetching operations. Ensure loading states are visually appealing and provide appropriate feedback to users about ongoing processes.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Enhance error handling and error boundary implementation",
+            "description": "Develop a comprehensive error handling strategy with user-friendly error messages and recovery options",
+            "dependencies": [],
+            "details": "Implement React Error Boundaries to catch and handle UI rendering errors. Create standardized error components with clear messaging and recovery actions. Handle network errors, API failures, and unexpected exceptions gracefully with appropriate user feedback.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Design and implement empty states for all data displays",
+            "description": "Create visually consistent empty state displays for lists, search results, and content areas with no data",
+            "dependencies": [],
+            "details": "Design empty state illustrations or icons with helpful messaging that guides users on next steps. Implement these states for search results, filtered lists, user-generated content areas, and any other components that may display no data.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Optimize component rendering performance",
+            "description": "Identify and resolve performance bottlenecks in component rendering",
+            "dependencies": [],
+            "details": "Use React DevTools Profiler to identify components that re-render unnecessarily. Implement React.memo, useMemo, and useCallback where appropriate to prevent wasteful re-renders. Optimize list rendering with virtualization for large datasets using libraries like react-window or react-virtualized.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Implement code splitting and lazy loading",
+            "description": "Reduce initial bundle size by implementing code splitting and lazy loading of components",
+            "dependencies": [
+              4
+            ],
+            "details": "Use React.lazy and Suspense to split the application into smaller chunks that load on demand. Identify large components or routes that can be lazy loaded. Implement prefetching strategies for anticipated user navigation paths to improve perceived performance.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Add subtle animations and transitions for improved UX",
+            "description": "Implement smooth animations and transitions to enhance user experience and provide visual feedback",
+            "dependencies": [
+              1
+            ],
+            "details": "Add micro-interactions, page transitions, and subtle animations for user actions. Ensure animations are purposeful and enhance rather than distract from the user experience. Use CSS transitions or animation libraries like Framer Motion with performance considerations in mind.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Audit and standardize styling across the application",
+            "description": "Ensure consistent styling, spacing, typography, and color usage throughout the application",
+            "dependencies": [],
+            "details": "Review all UI components for consistent application of design tokens (colors, spacing, typography, etc.). Create a visual regression testing process. Refactor any inconsistent styling and ensure all components follow the established design system.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "Implement comprehensive accessibility improvements",
+            "description": "Ensure the application meets WCAG 2.1 AA standards with proper keyboard navigation, screen reader support, and semantic HTML",
+            "dependencies": [
+              7
+            ],
+            "details": "Conduct an accessibility audit using tools like axe or Lighthouse. Implement proper focus management, ARIA attributes, and keyboard navigation. Ensure sufficient color contrast, text scaling, and screen reader compatibility. Test with actual assistive technologies.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 9,
+            "title": "Optimize responsive design for mobile devices",
+            "description": "Refine the responsive design to ensure optimal user experience across all device sizes",
+            "dependencies": [
+              7
+            ],
+            "details": "Test and optimize all UI components on various mobile devices and screen sizes. Implement touch-friendly interactions, appropriate tap target sizes, and mobile-specific UX patterns. Ensure content is properly displayed without horizontal scrolling or overlapping elements.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 10,
+            "title": "Conduct final UI review and refinement",
+            "description": "Perform a comprehensive review of the entire UI for final polish and refinements",
+            "dependencies": [
+              1,
+              2,
+              3,
+              6,
+              7,
+              8,
+              9
+            ],
+            "details": "Review all UI components for visual polish, interaction design, and consistency. Address any remaining design debt or inconsistencies. Gather feedback from stakeholders and implement final refinements. Ensure all UI elements align with the design specifications and brand guidelines.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 11,
+            "title": "Clicking the title in Board View should allow editing of title only, not the entire task",
+            "description": "Implement inline title editing functionality for task cards in Board View that allows users to edit only the task title without opening the full task modal",
+            "details": "Add inline editing capability to task titles in the Board View. When users click on a task title, it should become an editable input field that allows them to modify the title directly without opening the full task editing modal. This should include proper focus management, save/cancel functionality, and validation.",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 12
+          },
+          {
+            "id": 12,
+            "title": "Clicking the task in Calendar view should allow editing of the task, not affecting the drag and drop functionality",
+            "description": "Implement proper click handling for tasks in Calendar view to open task editing modal while preserving drag and drop functionality",
+            "details": "Enhance the Calendar view task interaction to properly distinguish between click events (for editing) and drag events (for moving tasks). Implement proper event handling that allows users to click on calendar tasks to open the task editing modal without interfering with the existing drag and drop functionality for moving tasks between dates.",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 12
+          }
+        ]
       },
       {
         "id": 13,
@@ -1107,7 +1379,7 @@
     ],
     "metadata": {
       "created": "2025-06-19T00:44:28.142Z",
-      "updated": "2025-06-25T02:50:09.837Z",
+      "updated": "2025-06-25T04:18:16.984Z",
       "description": "Tasks for master context"
     }
   }

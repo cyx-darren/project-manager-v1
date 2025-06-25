@@ -1,44 +1,155 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react'
+import React, { useEffect, useState, useCallback, useMemo, Suspense, lazy } from 'react'
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import type { Project, Task } from '../types/supabase'
 import { projectService } from '../services'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { 
-  ProjectHeader, 
-  ProjectTabs, 
-  ProjectOverview, 
-  ProjectTaskList,
-  ProjectTeam 
-} from '../components/projects'
-import { CustomKanbanBoard } from '../components/projects/CustomKanbanBoard'
-import { CalendarView } from '../components/calendar'
+import { ProjectHeader, ProjectTabs } from '../components/projects'
 import { TaskModal } from '../components/tasks'
 import { useAuth } from '../contexts/AuthContext'
 import { useTaskContext } from '../contexts/TaskContext'
 import { useProject } from '../contexts/ProjectContext'
 
+// Lazy load tab components for better performance
+const LazyProjectOverview = lazy(() => import('../components/projects/ProjectOverview').then(module => ({ default: module.ProjectOverview })))
+const LazyProjectTaskList = lazy(() => import('../components/projects/ProjectTaskList').then(module => ({ default: module.ProjectTaskList })))
+const LazyProjectTeam = lazy(() => import('../components/projects/ProjectTeam').then(module => ({ default: module.ProjectTeam })))
+const LazyCalendarView = lazy(() => import('../components/calendar/CalendarView'))
+const LazyCustomKanbanBoard = lazy(() => import('../components/projects/CustomKanbanBoard').then(module => ({ default: module.CustomKanbanBoard })))
+
 type TabType = 'overview' | 'tasks' | 'team' | 'calendar' | 'board'
 
-// Memoized loading fallback component
+// Memoized loading fallback component with better UX
 const TabContentLoader = React.memo(() => (
-  <div className="flex items-center justify-center py-8">
-    <LoadingSpinner />
+  <div className="flex items-center justify-center py-8 min-h-[200px]">
+    <div className="flex flex-col items-center space-y-2">
+      <LoadingSpinner />
+      <span className="text-sm text-gray-500">Loading...</span>
+    </div>
   </div>
 ))
 
 TabContentLoader.displayName = 'TabContentLoader'
 
-// Memoized tab content wrapper
+// Memoized tab content wrapper with performance optimizations
 const TabContentWrapper = React.memo<{
   children: React.ReactNode
   className?: string
-}>(({ children, className = "px-4 sm:px-6 py-4 sm:py-6 overflow-y-auto" }) => (
-  <div className={className}>
+  isActive: boolean
+}>(({ children, className = "px-4 sm:px-6 py-4 sm:py-6 overflow-y-auto", isActive }) => (
+  <div 
+    className={className}
+    style={{ 
+      display: isActive ? 'block' : 'none',
+      // Use will-change for better performance during tab switches
+      willChange: isActive ? 'transform' : 'auto'
+    }}
+  >
     {children}
   </div>
 ))
 
 TabContentWrapper.displayName = 'TabContentWrapper'
+
+// Virtualized tab content manager to prevent unnecessary renders
+const TabContentManager = React.memo<{
+  activeTab: TabType
+  project: Project
+  projectTasks: Task[]
+  handleProjectUpdate: (updates: Partial<Project>) => Promise<void>
+  handleTasksUpdate: (tasks: Task[]) => void
+  handleTaskClick: (task: Task, mode?: 'view' | 'edit') => void
+  handleNewTaskClick: () => void
+  handleDateClick: (date: Date) => void
+}>(({ 
+  activeTab, 
+  project, 
+  projectTasks, 
+  handleProjectUpdate, 
+  handleTasksUpdate, 
+  handleTaskClick, 
+  handleNewTaskClick, 
+  handleDateClick 
+}) => {
+  // Memoize common props to prevent unnecessary re-renders
+  const commonProps = useMemo(() => ({
+    project,
+    tasks: projectTasks,
+    onTasksUpdate: handleTasksUpdate
+  }), [project, projectTasks, handleTasksUpdate])
+
+  // Render all tabs but only show the active one (prevents re-mounting)
+  return (
+    <>
+      <TabContentWrapper isActive={activeTab === 'overview'}>
+        {activeTab === 'overview' && (
+          <Suspense fallback={<TabContentLoader />}>
+            <LazyProjectOverview 
+              project={project} 
+              tasks={projectTasks}
+              onProjectUpdate={handleProjectUpdate}
+            />
+          </Suspense>
+        )}
+      </TabContentWrapper>
+
+      <TabContentWrapper isActive={activeTab === 'tasks'}>
+        {activeTab === 'tasks' && (
+          <Suspense fallback={<TabContentLoader />}>
+            <LazyProjectTaskList 
+              {...commonProps}
+              onTaskClick={handleTaskClick}
+              onNewTaskClick={handleNewTaskClick}
+            />
+          </Suspense>
+        )}
+      </TabContentWrapper>
+
+      <TabContentWrapper isActive={activeTab === 'team'}>
+        {activeTab === 'team' && (
+          <Suspense fallback={<TabContentLoader />}>
+            <LazyProjectTeam 
+              project={project}
+              onProjectUpdate={handleProjectUpdate}
+            />
+          </Suspense>
+        )}
+      </TabContentWrapper>
+
+      <TabContentWrapper 
+        isActive={activeTab === 'calendar'}
+        className="px-2 sm:px-6 py-4 sm:py-6 overflow-y-auto"
+      >
+        {activeTab === 'calendar' && (
+          <Suspense fallback={<TabContentLoader />}>
+            <LazyCalendarView 
+              project={project}
+              tasks={projectTasks}
+              onTaskClick={handleTaskClick}
+              onDateClick={handleDateClick}
+            />
+          </Suspense>
+        )}
+      </TabContentWrapper>
+
+      <TabContentWrapper 
+        isActive={activeTab === 'board'}
+        className="flex-1 flex flex-col min-h-0 px-2 sm:px-4"
+      >
+        {activeTab === 'board' && (
+          <Suspense fallback={<TabContentLoader />}>
+            <LazyCustomKanbanBoard 
+              project={project}
+              onTasksUpdate={handleTasksUpdate}
+              onTaskClick={handleTaskClick}
+            />
+          </Suspense>
+        )}
+      </TabContentWrapper>
+    </>
+  )
+})
+
+TabContentManager.displayName = 'TabContentManager'
 
 const ProjectDetail: React.FC = () => {
   const { projectId, taskId } = useParams<{ projectId: string; taskId?: string }>()
@@ -376,72 +487,6 @@ const ProjectDetail: React.FC = () => {
     }
   }, [location.pathname, projectId, getUserPreferredTab, navigate])
 
-  // Memoize tab content rendering
-  const renderTabContent = useCallback(() => {
-    if (!project) return null
-
-    const commonProps = {
-      project,
-      tasks: projectTasks,
-      onTasksUpdate: handleTasksUpdate
-    }
-
-    switch (activeTab) {
-      case 'overview':
-        return (
-          <TabContentWrapper>
-            <ProjectOverview 
-              project={project} 
-              tasks={projectTasks}
-              onProjectUpdate={handleProjectUpdate}
-            />
-          </TabContentWrapper>
-        )
-      case 'tasks':
-        return (
-          <TabContentWrapper>
-            <ProjectTaskList 
-              {...commonProps}
-              onTaskClick={handleTaskClick}
-              onNewTaskClick={handleNewTaskClick}
-            />
-          </TabContentWrapper>
-        )
-      case 'team':
-        return (
-          <TabContentWrapper>
-            <ProjectTeam 
-              project={project}
-              onProjectUpdate={handleProjectUpdate}
-            />
-          </TabContentWrapper>
-        )
-      case 'calendar':
-        return (
-          <TabContentWrapper className="px-2 sm:px-6 py-4 sm:py-6 overflow-y-auto">
-            <CalendarView 
-              project={project}
-              tasks={projectTasks}
-              onTaskClick={handleTaskClick}
-              onDateClick={handleDateClick}
-            />
-          </TabContentWrapper>
-        )
-      case 'board':
-        return (
-          <TabContentWrapper className="flex-1 flex flex-col min-h-0 px-2 sm:px-4">
-            <CustomKanbanBoard 
-              project={project}
-              onTasksUpdate={handleTasksUpdate}
-              onTaskClick={handleTaskClick}
-            />
-          </TabContentWrapper>
-        )
-      default:
-        return null
-    }
-  }, [activeTab, project, projectTasks, handleProjectUpdate, handleTasksUpdate, handleTaskClick, handleDateClick])
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -506,7 +551,16 @@ const ProjectDetail: React.FC = () => {
       
       {/* Tab content - flexible area with responsive padding */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {renderTabContent()}
+        <TabContentManager
+          activeTab={activeTab}
+          project={project}
+          projectTasks={projectTasks}
+          handleProjectUpdate={handleProjectUpdate}
+          handleTasksUpdate={handleTasksUpdate}
+          handleTaskClick={handleTaskClick}
+          handleNewTaskClick={handleNewTaskClick}
+          handleDateClick={handleDateClick}
+        />
       </div>
       
       {/* Task Modal for calendar interactions and URL-driven behavior */}
