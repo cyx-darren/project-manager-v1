@@ -19,6 +19,7 @@ import PermissionDemo from '../components/dev/PermissionDemo';
 import SchemaValidationTest from '../pages/SchemaValidationTest';
 import CustomKanbanTest from '../pages/CustomKanbanTest';
 
+
 // Main application routes
 export const router = createBrowserRouter([
   {
@@ -281,6 +282,7 @@ export const router = createBrowserRouter([
       </AdminRoute>
     )
   },
+
   {
     path: '*',
     element: <NotFound />

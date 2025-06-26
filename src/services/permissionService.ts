@@ -2,40 +2,56 @@ import { supabase } from '../config/supabase'
 import type { 
   Permission, 
   ProjectPermission, 
+  WorkspacePermission,
   GlobalPermission, 
   ProjectRole,
+  WorkspaceRole,
   PermissionContext,
-  PermissionResult
+  PermissionResult,
+  CustomPermission
 } from '../types/permissions'
 import { PermissionError } from '../types/permissions'
 import { 
-  PROJECT_ROLE_PERMISSIONS, 
-  hasRolePermission,
+  PROJECT_ROLE_PERMISSIONS,
+  WORKSPACE_ROLE_PERMISSIONS,
+  GLOBAL_ROLE_PERMISSIONS,
+  hasProjectRolePermission,
+  hasWorkspaceRolePermission,
   isProjectPermission,
+  isWorkspacePermission,
   isGlobalPermission
 } from '../types/permissions'
-
-// Local global role permissions (simplified for our current schema)
-const GLOBAL_ROLE_PERMISSIONS: Record<string, GlobalPermission[]> = {
-  'system_admin': ['system.admin', 'user.manage', 'project.create'],
-  'project_owner': ['project.create'],
-  'user': ['project.create'] // For now, all users can create projects
-}
 import type { ApiResponse } from '../types/supabase'
 
-// Cache for user permissions to avoid repeated database calls
+// Enhanced cache for user permissions with workspace support
 interface PermissionCache {
   [key: string]: {
     permissions: Permission[]
     projectRoles: Record<string, ProjectRole>
+    workspaceRoles: Record<string, WorkspaceRole>
     globalRole?: string
+    customPermissions: CustomPermission[]
     expiresAt: number
   }
+}
+
+// Database function result types
+interface DatabasePermissionResult {
+  user_has_permission: boolean
+}
+
+interface DatabaseRoleResult {
+  get_user_project_role: 'owner' | 'admin' | 'member' | null
+}
+
+interface DatabaseWorkspaceRoleResult {
+  get_user_workspace_role: 'owner' | 'admin' | 'member' | 'billing_manager' | null
 }
 
 class PermissionService {
   private cache: PermissionCache = {}
   private readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+  private readonly DATABASE_AVAILABLE = false // Temporarily disable database functions until they're fixed
 
   /**
    * Clear the permission cache for a user
@@ -52,9 +68,37 @@ class PermissionService {
   }
 
   /**
-   * Get user's role in a specific project
+   * Get user's role in a specific project using database function
    */
   async getUserProjectRole(projectId: string, userId: string): Promise<ProjectRole | null> {
+    try {
+      if (this.DATABASE_AVAILABLE) {
+        // Use the database function from Task 9.1
+        const { data, error } = await supabase.rpc('get_user_project_role' as any, {
+          project_uuid: projectId,
+          user_uuid: userId
+        }) as { data: 'owner' | 'admin' | 'member' | null, error: any }
+
+        if (error) {
+          console.error('Database function error:', error)
+          // Fall back to direct table query
+          return this.getUserProjectRoleFallback(projectId, userId)
+        }
+
+        return data as ProjectRole
+      } else {
+        return this.getUserProjectRoleFallback(projectId, userId)
+      }
+    } catch (error) {
+      console.error('Error getting user project role:', error)
+      return this.getUserProjectRoleFallback(projectId, userId)
+    }
+  }
+
+  /**
+   * Fallback method for getting project role via direct table query
+   */
+  private async getUserProjectRoleFallback(projectId: string, userId: string): Promise<ProjectRole | null> {
     try {
       const { data, error } = await supabase
         .from('project_members')
@@ -71,35 +115,93 @@ class PermissionService {
         throw error
       }
 
-      return data.role as ProjectRole
+      return data?.role as ProjectRole || null
     } catch (error) {
-      console.error('Error getting user project role:', error)
+      console.error('Error in project role fallback:', error)
+      return null
+    }
+  }
+
+  /**
+   * Get user's role in a specific workspace using database function
+   */
+  async getUserWorkspaceRole(workspaceId: string, userId: string): Promise<WorkspaceRole | null> {
+    try {
+      if (this.DATABASE_AVAILABLE) {
+        // Use the database function from Task 9.1
+        const { data, error } = await supabase.rpc('get_user_workspace_role' as any, {
+          p_workspace_id: workspaceId,
+          p_user_id: userId
+        }) as { data: 'owner' | 'admin' | 'member' | 'billing_manager' | null, error: any }
+
+        if (error) {
+          console.error('Database function error:', error)
+          return this.getUserWorkspaceRoleFallback(workspaceId, userId)
+        }
+
+        return data as WorkspaceRole
+      } else {
+        return this.getUserWorkspaceRoleFallback(workspaceId, userId)
+      }
+    } catch (error) {
+      console.error('Error getting user workspace role:', error)
+      return this.getUserWorkspaceRoleFallback(workspaceId, userId)
+    }
+  }
+
+  /**
+   * Fallback method for getting workspace role via direct table query
+   */
+  private async getUserWorkspaceRoleFallback(workspaceId: string, userId: string): Promise<WorkspaceRole | null> {
+    try {
+      // Use type assertion since workspace_members table is not in current types
+      const { data, error } = await (supabase as any)
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', userId)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No rows returned - user is not a member
+          return null
+        }
+        console.error('Workspace members table not available yet:', error)
+        return null
+      }
+
+      return data?.role as WorkspaceRole || null
+    } catch (error) {
+      console.error('Error in workspace role fallback:', error)
       return null
     }
   }
 
   /**
    * Get user's global role (from user profile or system settings)
-   * For now, we'll use a simple approach - check if user owns any projects
    */
   async getUserGlobalRole(userId: string): Promise<string | null> {
     try {
-      // For now, we'll determine global role based on project ownership
-      // In a real system, you'd have a proper user roles table
-      const { data: ownedProjects, error } = await supabase
-        .from('projects')
-        .select('id')
-        .eq('owner_id', userId)
-        .limit(1)
+      // Try to get from profiles table with role column
+      // Use type assertion since profiles table may not be in current types
+      const { data, error } = await (supabase as any)
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single()
 
       if (error) {
-        console.error('Error getting user global role:', error)
+        // If profiles table doesn't exist or user not found, return default role
+        if (error.code === '42P01' || error.code === 'PGRST116') {
+          // Table doesn't exist or no rows returned - return default role
+          return 'user'
+        }
+        console.error('Error getting global role from profiles:', error)
         return 'user' // Default role
       }
 
-      // If user owns any projects, they can create projects
-      // Otherwise, they're a regular user
-      return ownedProjects && ownedProjects.length > 0 ? 'project_owner' : 'user'
+      return data?.role || 'user'
     } catch (error) {
       console.error('Error getting user global role:', error)
       return 'user'
@@ -107,19 +209,256 @@ class PermissionService {
   }
 
   /**
-   * Get all permissions for a user in a specific project context
+   * Get custom permissions for a user in a specific context
    */
-  async getUserPermissions(userId: string, projectId?: string): Promise<Permission[]> {
-    const cacheKey = `${userId}_${projectId || 'global'}`
-    const cached = this.cache[cacheKey]
+  async getCustomPermissions(userId: string, context?: PermissionContext): Promise<CustomPermission[]> {
+    try {
+      // Query custom_permissions table if available
+      // Use type assertion since custom_permissions table is not in current types
+      const query = (supabase as any)
+        .from('custom_permissions')
+        .select('*')
+        .eq('user_id', userId)
 
-    // Return cached permissions if still valid
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.permissions
+      // Add context filters if provided
+      if (context?.workspaceId) {
+        query.eq('workspace_id', context.workspaceId)
+      }
+      if (context?.projectId) {
+        query.eq('project_id', context.projectId)
+      }
+      if (context?.taskId) {
+        query.eq('task_id', context.taskId)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('Custom permissions table not available yet:', error)
+        return []
+      }
+
+      return data?.map((row: any) => ({
+        userId: row.user_id,
+        permission: row.permission as Permission,
+        granted: row.granted,
+        context: {
+          workspaceId: row.workspace_id,
+          projectId: row.project_id,
+          taskId: row.task_id
+        },
+        grantedBy: row.granted_by,
+        grantedAt: new Date(row.granted_at)
+      })) || []
+    } catch (error) {
+      console.error('Error getting custom permissions:', error)
+      return []
     }
+  }
 
+  /**
+   * Check permission using database function with fallback
+   */
+  async hasPermissionViaDatabase(
+    userId: string,
+    permission: Permission,
+    context?: PermissionContext
+  ): Promise<PermissionResult> {
+    try {
+      if (this.DATABASE_AVAILABLE) {
+        // Determine context type and ID for the database function
+        let contextType: string
+        let contextId: string | null = null
+
+        if (context?.taskId) {
+          contextType = 'task'
+          contextId = context.taskId
+        } else if (context?.projectId) {
+          contextType = 'project'
+          contextId = context.projectId
+        } else if (context?.workspaceId) {
+          contextType = 'workspace'
+          contextId = context.workspaceId
+        } else {
+          contextType = 'global'
+        }
+
+        // Use the database function from Task 9.1
+        const { data, error } = await supabase.rpc('user_has_permission' as any, {
+          p_user_id: userId,
+          p_permission_action: permission,
+          p_context_type: contextType,
+          p_context_id: contextId
+        }) as { data: boolean, error: any }
+
+        if (error) {
+          console.error('Database permission check error:', error)
+          // Fall back to local permission checking
+          return this.hasPermissionLocal(userId, permission, context)
+        }
+
+        return {
+          hasPermission: data,
+          source: 'role',
+          reason: data ? 
+            'Permission granted via database function' : 
+            'Permission denied via database function'
+        }
+      } else {
+        return this.hasPermissionLocal(userId, permission, context)
+      }
+    } catch (error) {
+      console.error('Error checking permission via database:', error)
+      // Fallback to local permission checking
+      return this.hasPermissionLocal(userId, permission, context)
+    }
+  }
+
+  /**
+   * Local permission checking (fallback method)
+   */
+  async hasPermissionLocal(
+    userId: string,
+    permission: Permission,
+    context?: PermissionContext
+  ): Promise<PermissionResult> {
+    try {
+      // Check custom permissions first
+      const customPermissions = await this.getCustomPermissions(userId, context)
+      const customPermission = customPermissions.find(cp => 
+        cp.permission === permission &&
+        cp.context.workspaceId === context?.workspaceId &&
+        cp.context.projectId === context?.projectId &&
+        cp.context.taskId === context?.taskId
+      )
+
+      if (customPermission) {
+        return {
+          hasPermission: customPermission.granted,
+          source: 'custom',
+          reason: customPermission.granted ? 
+            'Granted via custom permission' : 
+            'Denied via custom permission'
+        }
+      }
+
+      // Check role-based permissions
+      if (isWorkspacePermission(permission) && context?.workspaceId) {
+        const workspaceRole = await this.getUserWorkspaceRole(context.workspaceId, userId)
+        if (workspaceRole && hasWorkspaceRolePermission(workspaceRole, permission)) {
+          return {
+            hasPermission: true,
+            source: 'role',
+            requiredRole: workspaceRole
+          }
+        }
+      }
+
+      if (isProjectPermission(permission) && context?.projectId) {
+        const projectRole = await this.getUserProjectRole(context.projectId, userId)
+        if (projectRole && hasProjectRolePermission(projectRole, permission)) {
+          return {
+            hasPermission: true,
+            source: 'role',
+            requiredRole: projectRole
+          }
+        }
+      }
+
+      if (isGlobalPermission(permission)) {
+        const globalRole = await this.getUserGlobalRole(userId)
+        if (globalRole && GLOBAL_ROLE_PERMISSIONS[globalRole]?.includes(permission)) {
+          return {
+            hasPermission: true,
+            source: 'role'
+          }
+        }
+      }
+
+      return {
+        hasPermission: false,
+        reason: 'No matching role or custom permission found'
+      }
+    } catch (error) {
+      console.error('Error in local permission check:', error)
+      return {
+        hasPermission: false,
+        reason: `Permission check failed: ${error}`
+      }
+    }
+  }
+
+  /**
+   * Main permission checking method with caching
+   */
+  async hasPermission(
+    userId: string,
+    permission: Permission,
+    context?: PermissionContext
+  ): Promise<PermissionResult> {
+    try {
+      // Generate cache key
+      const cacheKey = `${userId}-${permission}-${JSON.stringify(context || {})}`
+      
+      // Check cache first (for performance)
+      const cached = this.cache[userId]
+      if (cached && cached.expiresAt > Date.now()) {
+        // Use cached data for quick local check
+        return this.hasPermissionLocal(userId, permission, context)
+      }
+
+      // Use database function for fresh permission check
+      return this.hasPermissionViaDatabase(userId, permission, context)
+    } catch (error) {
+      console.error('Error in hasPermission:', error)
+      return {
+        hasPermission: false,
+        reason: `Permission check failed: ${error}`
+      }
+    }
+  }
+
+  /**
+   * Check multiple permissions at once
+   */
+  async hasPermissions(
+    userId: string,
+    permissions: Permission[],
+    context?: PermissionContext
+  ): Promise<Record<Permission, PermissionResult>> {
+    const results: Record<Permission, PermissionResult> = {} as any
+
+    // Check permissions in parallel for better performance
+    await Promise.all(
+      permissions.map(async (permission) => {
+        results[permission] = await this.hasPermission(userId, permission, context)
+      })
+    )
+
+    return results
+  }
+
+  /**
+   * Get all permissions for a user in a specific context
+   */
+  async getUserPermissions(userId: string, context?: PermissionContext): Promise<Permission[]> {
     try {
       const permissions: Permission[] = []
+
+      // Get role-based permissions
+      if (context?.workspaceId) {
+        const workspaceRole = await this.getUserWorkspaceRole(context.workspaceId, userId)
+        if (workspaceRole && WORKSPACE_ROLE_PERMISSIONS[workspaceRole]) {
+          permissions.push(...WORKSPACE_ROLE_PERMISSIONS[workspaceRole])
+        }
+      }
+
+      if (context?.projectId) {
+        const projectRole = await this.getUserProjectRole(context.projectId, userId)
+        if (projectRole && PROJECT_ROLE_PERMISSIONS[projectRole]) {
+          permissions.push(...PROJECT_ROLE_PERMISSIONS[projectRole])
+        }
+      }
 
       // Get global permissions
       const globalRole = await this.getUserGlobalRole(userId)
@@ -127,75 +466,24 @@ class PermissionService {
         permissions.push(...GLOBAL_ROLE_PERMISSIONS[globalRole])
       }
 
-      // Get project-specific permissions
-      if (projectId) {
-        const projectRole = await this.getUserProjectRole(projectId, userId)
-        if (projectRole && PROJECT_ROLE_PERMISSIONS[projectRole]) {
-          permissions.push(...PROJECT_ROLE_PERMISSIONS[projectRole])
-        }
-      }
+      // Get custom permissions
+      const customPermissions = await this.getCustomPermissions(userId, context)
+      const grantedCustomPermissions = customPermissions
+        .filter(cp => cp.granted)
+        .map(cp => cp.permission)
 
-      // Cache the result
-      this.cache[cacheKey] = {
-        permissions,
-        projectRoles: projectId ? { [projectId]: await this.getUserProjectRole(projectId, userId) || 'viewer' } : {},
-        globalRole: globalRole || undefined,
-        expiresAt: Date.now() + this.CACHE_DURATION
-      }
+      // Combine and deduplicate
+      const combinedPermissions = [...permissions, ...grantedCustomPermissions]
+      const allPermissions = Array.from(new Set(combinedPermissions))
 
-      return permissions
+      return allPermissions
     } catch (error) {
       console.error('Error getting user permissions:', error)
       return []
     }
   }
 
-  /**
-   * Check if user has a specific permission
-   */
-  async hasPermission(
-    userId: string, 
-    permission: Permission, 
-    context?: PermissionContext
-  ): Promise<PermissionResult> {
-    try {
-      const userPermissions = await this.getUserPermissions(userId, context?.projectId)
-      const hasPermission = userPermissions.includes(permission)
 
-      if (hasPermission) {
-        return { hasPermission: true }
-      }
-
-      // If no permission, provide helpful error information
-      let reason = `Missing permission: ${permission}`
-      let requiredRole: ProjectRole | undefined
-
-      if (isProjectPermission(permission) && context?.projectId) {
-        // Find the minimum role that has this permission
-        for (const [role, rolePermissions] of Object.entries(PROJECT_ROLE_PERMISSIONS)) {
-          if (rolePermissions.includes(permission)) {
-            requiredRole = role as ProjectRole
-            break
-          }
-        }
-        
-        const currentRole = await this.getUserProjectRole(context.projectId, userId)
-        reason = `Permission '${permission}' requires role '${requiredRole}', but user has role '${currentRole || 'none'}'`
-      }
-
-      return {
-        hasPermission: false,
-        reason,
-        requiredRole
-      }
-    } catch (error) {
-      console.error('Error checking permission:', error)
-      return {
-        hasPermission: false,
-        reason: 'Error checking permission'
-          }
-  }
-  }
 
   /**
    * Check if user has any of the specified permissions
@@ -295,7 +583,7 @@ class PermissionService {
       
       for (const membership of memberships || []) {
         const role = membership.role as ProjectRole
-        if (hasRolePermission(role, permission)) {
+        if (hasProjectRolePermission(role, permission)) {
           projectsWithPermission.push(membership.project_id)
         }
       }
@@ -303,6 +591,23 @@ class PermissionService {
       return projectsWithPermission
     } catch (error) {
       console.error('Error getting projects with permission:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get all workspaces where user has a specific permission
+   */
+  async getWorkspacesWithPermission(
+    userId: string, 
+    permission: WorkspacePermission
+  ): Promise<string[]> {
+    try {
+      // For now, return empty array since workspace_members table may not be available
+      // This will be implemented when the database schema is fully migrated
+      return []
+    } catch (error) {
+      console.error('Error getting workspaces with permission:', error)
       return []
     }
   }
@@ -352,23 +657,31 @@ class PermissionService {
   }
 
   /**
-   * Get permission summary for a user in a project
+   * Get permission summary for a user in a context
    */
-  async getPermissionSummary(userId: string, projectId?: string): Promise<{
-    role: ProjectRole | string | null
+  async getPermissionSummary(userId: string, context?: PermissionContext): Promise<{
+    workspaceRole: WorkspaceRole | null
+    projectRole: ProjectRole | null
+    globalRole: string | null
     permissions: Permission[]
+    customPermissions: CustomPermission[]
     canManage: string[]
   }> {
     try {
-      let role: ProjectRole | string | null = null
+      let workspaceRole: WorkspaceRole | null = null
+      let projectRole: ProjectRole | null = null
       
-      if (projectId) {
-        role = await this.getUserProjectRole(projectId, userId)
-      } else {
-        role = await this.getUserGlobalRole(userId)
+      if (context?.workspaceId) {
+        workspaceRole = await this.getUserWorkspaceRole(context.workspaceId, userId)
+      }
+      
+      if (context?.projectId) {
+        projectRole = await this.getUserProjectRole(context.projectId, userId)
       }
 
-      const permissions = await this.getUserPermissions(userId, projectId)
+      const globalRole = await this.getUserGlobalRole(userId)
+      const permissions = await this.getUserPermissions(userId, context)
+      const customPermissions = await this.getCustomPermissions(userId, context)
       
       // Determine what the user can manage
       const canManage: string[] = []
@@ -377,17 +690,25 @@ class PermissionService {
       if (permissions.includes('team.role.change')) canManage.push('change roles')
       if (permissions.includes('project.edit')) canManage.push('edit project')
       if (permissions.includes('project.delete')) canManage.push('delete project')
+      if (permissions.includes('workspace.edit')) canManage.push('edit workspace')
+      if (permissions.includes('workspace.manage_roles')) canManage.push('manage workspace roles')
 
       return {
-        role,
+        workspaceRole,
+        projectRole,
+        globalRole,
         permissions,
+        customPermissions,
         canManage
       }
     } catch (error) {
       console.error('Error getting permission summary:', error)
       return {
-        role: null,
+        workspaceRole: null,
+        projectRole: null,
+        globalRole: null,
         permissions: [],
+        customPermissions: [],
         canManage: []
       }
     }

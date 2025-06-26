@@ -6,6 +6,7 @@ import { router } from './routes'
 import ErrorBoundary from './components/ErrorBoundary'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider } from './contexts/AuthContext'
+import { PermissionProvider } from './contexts/PermissionContext'
 import { ProjectProvider } from './contexts/ProjectContext'
 import { SearchProvider } from './contexts/SearchContext'
 import { ToastProvider } from './contexts/ToastContext'
@@ -28,13 +29,15 @@ createRoot(document.getElementById('root')!).render(
       <ThemeProvider>
         <ToastProvider>
         <AuthProvider>
-          <ProjectProvider>
-              <TaskProvider>
-            <SearchProvider>
-              <RouterProvider router={router} />
-            </SearchProvider>
-              </TaskProvider>
-          </ProjectProvider>
+          <PermissionProvider>
+            <ProjectProvider>
+                <TaskProvider>
+              <SearchProvider>
+                <RouterProvider router={router} />
+              </SearchProvider>
+                </TaskProvider>
+            </ProjectProvider>
+          </PermissionProvider>
         </AuthProvider>
         </ToastProvider>
       </ThemeProvider>

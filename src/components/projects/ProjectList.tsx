@@ -209,7 +209,7 @@ const ProjectList: React.FC = () => {
               </p>
             </div>
             
-            <PermissionGuard requiredPermission="project.create">
+            <PermissionGuard requiredPermission="workspace.create_projects">
               <button
                 onClick={() => setIsCreateModalOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
@@ -244,7 +244,7 @@ const ProjectList: React.FC = () => {
               }
             </p>
             {projects.length === 0 && (
-              <PermissionGuard requiredPermission="project.create">
+              <PermissionGuard requiredPermission="workspace.create_projects">
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
                   className="flex items-center gap-2 mx-auto px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"

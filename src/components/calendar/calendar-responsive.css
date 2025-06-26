@@ -621,4 +621,23 @@ html {
   .calendar-task:active {
     cursor: grabbing;
   }
+}
+
+/* Ensure drag overlay doesn't interfere with drop detection */
+[role="presentation"] { /* DragOverlay container */
+  pointer-events: none !important;
+}
+
+[role="presentation"] * {
+  pointer-events: none !important;
+}
+
+/* Enhanced drag overlay styling */
+.calendar-task.dragging {
+  opacity: 0.9 !important;
+  transform: rotate(2deg) !important;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25) !important;
+  z-index: 1000 !important;
+  background-color: #dbeafe !important;
+  border-left-color: #2563eb !important;
 } 

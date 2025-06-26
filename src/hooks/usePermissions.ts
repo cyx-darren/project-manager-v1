@@ -1,13 +1,22 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { usePermissionContext } from '../contexts/PermissionContext'
 import { permissionService } from '../services/permissionService'
 import type { 
   Permission, 
-  ProjectPermission, 
   ProjectRole,
+  WorkspaceRole,
   PermissionContext,
   PermissionResult
 } from '../types/permissions'
+
+/**
+ * Main hook for permission management - uses context when available
+ */
+export const usePermissions = () => {
+  const context = usePermissionContext()
+  return context
+}
 
 /**
  * Hook to check if the current user has a specific permission
@@ -154,6 +163,47 @@ export const useProjectRole = (projectId?: string) => {
 }
 
 /**
+ * Hook to get the user's role in a specific workspace
+ */
+export const useWorkspaceRole = (workspaceId?: string) => {
+  const { user } = useAuth()
+  const [role, setRole] = useState<WorkspaceRole | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const fetchRole = useCallback(async () => {
+    if (!user?.id || !workspaceId) {
+      setRole(null)
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    try {
+      const userRole = await permissionService.getUserWorkspaceRole(workspaceId, user.id)
+      setRole(userRole)
+    } catch (error) {
+      console.error('Error fetching workspace role:', error)
+      setRole(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [user?.id, workspaceId])
+
+  useEffect(() => {
+    fetchRole()
+  }, [fetchRole])
+
+  return {
+    role,
+    loading,
+    refetch: fetchRole,
+    isOwner: role === 'owner',
+    isAdmin: role === 'admin',
+    isMember: role === 'member'
+  }
+}
+
+/**
  * Hook to get all permissions for the current user in a project context
  */
 export const useUserPermissions = (projectId?: string) => {
@@ -170,10 +220,13 @@ export const useUserPermissions = (projectId?: string) => {
 
     setLoading(true)
     try {
-      const userPermissions = await permissionService.getUserPermissions(user.id, projectId)
+      const userPermissions = await permissionService.getUserPermissions(user.id, projectId ? { projectId } : undefined)
       setPermissions(userPermissions)
     } catch (error) {
-      console.error('Error fetching user permissions:', error)
+      // Suppress error logging for missing profiles table (expected during development)
+      if (error instanceof Error && !error.message.includes('relation "public.profiles" does not exist')) {
+        console.error('Error fetching user permissions:', error)
+      }
       setPermissions([])
     } finally {
       setLoading(false)
@@ -208,7 +261,7 @@ export const useUserPermissions = (projectId?: string) => {
 }
 
 /**
- * Hook to check if the current user can manage another user in a project
+ * Hook to check if user can manage another user
  */
 export const useCanManageUser = (
   targetUserId?: string, 
@@ -218,30 +271,41 @@ export const useCanManageUser = (
   const { user } = useAuth()
   const [canManage, setCanManage] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [reason, setReason] = useState<string>()
 
   const checkManagePermission = useCallback(async () => {
-    if (!user?.id || !targetUserId || !projectId) {
+    if (!user?.id || !targetUserId) {
       setCanManage(false)
-      setReason('Missing required parameters')
       setLoading(false)
       return
     }
 
     setLoading(true)
     try {
-      const result = await permissionService.canManageUser(
+      let permission: Permission
+      switch (action) {
+        case 'promote':
+          permission = 'team.role.change'
+          break
+        case 'demote':
+          permission = 'team.role.change'
+          break
+        case 'remove':
+          permission = 'team.remove'
+          break
+        default:
+          permission = 'team.remove'
+      }
+
+      const result = await permissionService.hasPermission(
         user.id, 
-        targetUserId, 
-        projectId, 
-        action
+        permission, 
+        projectId ? { projectId } : undefined
       )
+      
       setCanManage(result.hasPermission)
-      setReason(result.reason)
     } catch (error) {
       console.error('Error checking manage permission:', error)
       setCanManage(false)
-      setReason('Error checking permission')
     } finally {
       setLoading(false)
     }
@@ -253,42 +317,64 @@ export const useCanManageUser = (
 
   return {
     canManage,
-    reason,
     loading,
     refetch: checkManagePermission
   }
 }
 
 /**
- * Hook to get a permission summary for the current user
+ * Hook to get a comprehensive permission summary for a user
  */
 export const usePermissionSummary = (projectId?: string) => {
   const { user } = useAuth()
   const [summary, setSummary] = useState<{
-    role: ProjectRole | string | null
+    projectRole: ProjectRole | null
     permissions: Permission[]
-    canManage: string[]
+    canEdit: boolean
+    canDelete: boolean
+    canInvite: boolean
+    canManageTeam: boolean
   }>({
-    role: null,
+    projectRole: null,
     permissions: [],
-    canManage: []
+    canEdit: false,
+    canDelete: false,
+    canInvite: false,
+    canManageTeam: false
   })
   const [loading, setLoading] = useState(true)
 
   const fetchSummary = useCallback(async () => {
     if (!user?.id) {
-      setSummary({ role: null, permissions: [], canManage: [] })
       setLoading(false)
       return
     }
 
     setLoading(true)
     try {
-      const permissionSummary = await permissionService.getPermissionSummary(user.id, projectId)
-      setSummary(permissionSummary)
+      const [projectRole, permissions] = await Promise.all([
+        projectId ? permissionService.getUserProjectRole(projectId, user.id) : Promise.resolve(null),
+        permissionService.getUserPermissions(user.id, projectId ? { projectId } : undefined)
+      ])
+
+      const context = projectId ? { projectId } : undefined
+      const [canEdit, canDelete, canInvite, canManageTeam] = await Promise.all([
+        permissionService.hasPermission(user.id, 'project.edit', context),
+        permissionService.hasPermission(user.id, 'project.delete', context),
+        permissionService.hasPermission(user.id, 'team.invite', context),
+        permissionService.hasPermission(user.id, 'team.role.change', context)
+      ])
+
+      setSummary({
+        projectRole,
+        permissions,
+        canEdit: canEdit.hasPermission,
+        canDelete: canDelete.hasPermission,
+        canInvite: canInvite.hasPermission,
+        canManageTeam: canManageTeam.hasPermission
+      })
     } catch (error) {
       console.error('Error fetching permission summary:', error)
-      setSummary({ role: null, permissions: [], canManage: [] })
     } finally {
       setLoading(false)
     }
@@ -306,68 +392,116 @@ export const usePermissionSummary = (projectId?: string) => {
 }
 
 /**
- * Utility hook for common project permissions
+ * Hook for project-specific permissions
  */
 export const useProjectPermissions = (projectId?: string) => {
   const { permissions, loading } = useUserPermissions(projectId)
-
-  return useMemo(() => {
-    const hasPermission = (permission: Permission) => permissions.includes(permission);
-    
-    return {
-      // Project management
-      canViewProject: hasPermission('project.view'),
-      canEditProject: hasPermission('project.edit'),
-      canDeleteProject: hasPermission('project.delete'),
-      canArchiveProject: hasPermission('project.archive'),
-      
-      // Task management
-      canViewTasks: hasPermission('task.view'),
-      canCreateTasks: hasPermission('task.create'),
-      canEditTasks: hasPermission('task.edit'),
-      canDeleteTasks: hasPermission('task.delete'),
-      canAssignTasks: hasPermission('task.assign'),
-      
-      // Team management
-      canViewTeam: hasPermission('team.view'),
-      canInviteMembers: hasPermission('team.invite'),
-      canRemoveMembers: hasPermission('team.remove'),
-      canChangeRoles: hasPermission('team.role.change'),
-      
-      // Comments and collaboration
-      canViewComments: hasPermission('comment.view'),
-      canCreateComments: hasPermission('comment.create'),
-      canEditComments: hasPermission('comment.edit'),
-      canDeleteComments: hasPermission('comment.delete'),
-      
-      // Analytics
-      canViewAnalytics: hasPermission('analytics.view'),
-      canGenerateReports: hasPermission('report.generate'),
-      
-      // Loading state
-      loading
-    };
-  }, [permissions, loading])
+  
+  return {
+    permissions,
+    loading,
+    hasPermission: (permission: Permission) => permissions.includes(permission),
+    canEdit: permissions.includes('project.edit'),
+    canDelete: permissions.includes('project.delete'),
+    canInvite: permissions.includes('team.invite'),
+    canManageTeam: permissions.includes('team.role.change'),
+    canViewTasks: permissions.includes('task.view'),
+    canCreateTasks: permissions.includes('task.create'),
+    canEditTasks: permissions.includes('task.edit'),
+    canDeleteTasks: permissions.includes('task.delete')
+  }
 }
 
 /**
- * Hook to clear permission cache when needed
+ * Hook for workspace-specific permissions
  */
-export const usePermissionCache = () => {
+export const useWorkspacePermissions = (workspaceId?: string) => {
   const { user } = useAuth()
+  const [permissions, setPermissions] = useState<Permission[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const clearUserCache = useCallback(() => {
-    if (user?.id) {
-      permissionService.clearCache(user.id)
+  const fetchPermissions = useCallback(async () => {
+    if (!user?.id || !workspaceId) {
+      setPermissions([])
+      setLoading(false)
+      return
     }
-  }, [user?.id])
 
-  const clearAllCache = useCallback(() => {
-    permissionService.clearAllCache()
-  }, [])
+    setLoading(true)
+    try {
+      const userPermissions = await permissionService.getUserPermissions(user.id, undefined)
+      setPermissions(userPermissions)
+    } catch (error) {
+      console.error('Error fetching workspace permissions:', error)
+      setPermissions([])
+    } finally {
+      setLoading(false)
+    }
+  }, [user?.id, workspaceId])
+
+  useEffect(() => {
+    fetchPermissions()
+  }, [fetchPermissions])
 
   return {
-    clearUserCache,
-    clearAllCache
+    permissions,
+    loading,
+    hasPermission: (permission: Permission) => permissions.includes(permission),
+         canCreateProjects: permissions.includes('workspace.create_project'),
+    canManageWorkspace: permissions.includes('workspace.edit'),
+    canInviteUsers: permissions.includes('team.invite'),
+    canManageUsers: permissions.includes('team.role.change')
   }
+}
+
+/**
+ * Hook to check if user is admin
+ */
+export const useIsAdmin = (projectId?: string) => {
+  const { role } = useProjectRole(projectId)
+  return {
+    isAdmin: role === 'admin' || role === 'owner',
+    isOwner: role === 'owner',
+    role
+  }
+}
+
+/**
+ * Hook to check if user can manage users
+ */
+export const useCanManageUsers = (projectId?: string) => {
+  const { hasPermission } = usePermission('team.role.change', projectId ? { projectId } : undefined)
+  return hasPermission
+}
+
+/**
+ * Hook to preload common permissions for performance
+ */
+export const usePreloadCommonPermissions = (projectId?: string) => {
+  const { user } = useAuth()
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const preloadPermissions = async () => {
+      const commonPermissions: Permission[] = [
+        'task.view',
+        'task.create', 
+        'task.edit',
+        'project.edit',
+        'team.invite'
+      ]
+
+      const context = projectId ? { projectId } : undefined
+      
+      // Preload in parallel
+      await Promise.all(
+        commonPermissions.map(permission => 
+          permissionService.hasPermission(user.id, permission, context)
+        )
+      )
+    }
+
+    preloadPermissions().catch(console.error)
+  }, [user?.id, projectId])
 } 

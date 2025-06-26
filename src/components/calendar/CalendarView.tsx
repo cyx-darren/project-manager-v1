@@ -163,7 +163,7 @@ const DroppableCalendarCell: React.FC<{
   const [isExpanded, setIsExpanded] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   
-  // Handle responsive breakpoint
+  // Handle responsive breakpoint - this useEffect must be called every render
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
     checkMobile()
@@ -180,20 +180,19 @@ const DroppableCalendarCell: React.FC<{
   // Use simple format for droppableId - let's test if this works better
   const droppableId = `cell-${dateStr}`
 
-  // Conditionally use droppable hook only for cells that should be droppable
-  const dropResult = isDroppable ? useDroppable({
+  // FIXED: Always call useDroppable hook, but disable it when not needed
+  // This prevents "Rendered more hooks than during the previous render" error
+  const { isOver, setNodeRef } = useDroppable({
     id: droppableId,
+    disabled: !isDroppable, // Use disabled property instead of conditional hook call
     data: {
       date: date,
     },
-  }) : { isOver: false, setNodeRef: (node: any) => {} }
-  
-  const { isOver, setNodeRef } = dropResult
+  })
   
   // Re-enable hover feedback now that we have unique droppable elements
+  // Only show hover effect if the droppable is enabled
   const isActiveDropTarget = isOver && isDroppable
-
-
 
   // Calculate visible tasks based on expansion state and available space
   const calculateMaxInitialTasks = () => {
@@ -207,8 +206,6 @@ const DroppableCalendarCell: React.FC<{
   const maxVisibleTasks = isExpanded ? tasks.length : maxInitialTasks
   const visibleTasks = tasks.slice(0, maxVisibleTasks)
   const hasMoreTasks = tasks.length > maxInitialTasks
-
-
 
   const isToday = () => {
     const today = new Date()
@@ -248,66 +245,66 @@ const DroppableCalendarCell: React.FC<{
     setIsExpanded(!isExpanded)
   }
 
-        return (
-        <div
-          ref={setNodeRef}
-          className={cellClasses}
-          onClick={handleCellClick}
-        >
-          {/* Temporary visual debugging - shows cell number, date, and droppable ID 
-          {cellNumber !== undefined && (
-            <div className="absolute top-0 left-0 text-[10px] text-white bg-red-600 px-1 rounded-br z-50">
-              #{cellNumber} - {date.getDate()} - {droppableId.split('-').pop()}
-            </div>
-          )}
-          */}
-          
-          <div className={`date-number text-sm mb-1 ${
-            isToday() 
-              ? 'bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-medium' 
-              : isCurrentMonth 
-                ? 'text-gray-900 font-medium' 
-                : 'text-gray-400'
-          }`}>
-            {date.getDate() === 1 ? (
-              <div className="flex flex-col items-start">
-                <span className="text-xs font-normal text-gray-500">
-                  {date.toLocaleDateString('en-US', { month: 'short' })}
-                </span>
-                <span className={`font-semibold ${isToday() ? '' : 'text-gray-900'}`}>
-            {date.getDate()}
-                </span>
-              </div>
-            ) : (
-              date.getDate()
-            )}
-          </div>
+  return (
+    <div
+      ref={setNodeRef}
+      className={cellClasses}
+      onClick={handleCellClick}
+    >
+      {/* Temporary visual debugging - shows cell number, date, and droppable ID 
+      {cellNumber !== undefined && (
+        <div className="absolute top-0 left-0 text-[10px] text-white bg-red-600 px-1 rounded-br z-50">
+          #{cellNumber} - {date.getDate()} - {droppableId.split('-').pop()}
+        </div>
+      )}
+      */}
       
-      <div className={`task-container ${isExpanded ? 'expanded' : ''}`}>
-        {visibleTasks.map((task, index) => (
-          <DraggableTask
-            key={`${task.id}-${index}`}
-            task={task}
-            onTaskClick={onTaskClick}
-          />
-        ))}
-        
-        {/* Show "See More" / "See Less" button when appropriate */}
-        {hasMoreTasks && (
-          <button
-            className="see-more-btn"
-            onClick={handleToggleExpansion}
-            title={isExpanded ? 'Show less tasks' : `Show ${tasks.length - maxInitialTasks} more tasks`}
-          >
-            {isExpanded 
-              ? 'Show Less' 
-              : `+${tasks.length - maxVisibleTasks} more`
-            }
-          </button>
+      <div className={`date-number text-sm mb-1 ${
+        isToday() 
+          ? 'bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-medium' 
+          : isCurrentMonth 
+            ? 'text-gray-900 font-medium' 
+            : 'text-gray-400'
+      }`}>
+        {date.getDate() === 1 ? (
+          <div className="flex flex-col items-start">
+            <span className="text-xs font-normal text-gray-500">
+              {date.toLocaleDateString('en-US', { month: 'short' })}
+            </span>
+            <span className={`font-semibold ${isToday() ? '' : 'text-gray-900'}`}>
+              {date.getDate()}
+            </span>
+          </div>
+        ) : (
+          date.getDate()
         )}
       </div>
+  
+    <div className={`task-container ${isExpanded ? 'expanded' : ''}`}>
+      {visibleTasks.map((task, index) => (
+        <DraggableTask
+          key={`${task.id}-${index}`}
+          task={task}
+          onTaskClick={onTaskClick}
+        />
+      ))}
+      
+      {/* Show "See More" / "See Less" button when appropriate */}
+      {hasMoreTasks && (
+        <button
+          className="see-more-btn"
+          onClick={handleToggleExpansion}
+          title={isExpanded ? 'Show less tasks' : `Show ${tasks.length - maxInitialTasks} more tasks`}
+        >
+          {isExpanded 
+            ? 'Show Less' 
+            : `+${tasks.length - maxVisibleTasks} more`
+          }
+        </button>
+      )}
     </div>
-  )
+  </div>
+)
 }
 
 // Mobile Calendar List Component (unchanged for mobile)
@@ -868,6 +865,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     }
   }, []) // Run once on mount
 
+  // Helper function to deduplicate months
+  const deduplicateMonths = (months: VisibleMonth[]): VisibleMonth[] => {
+    const seen = new Set<string>()
+    return months.filter(month => {
+      const key = `${month.year}-${month.month}`
+      if (seen.has(key)) {
+        return false
+      }
+      seen.add(key)
+      return true
+    })
+  }
+
   // Enhanced scroll handling for bidirectional infinite scroll
   const handleScroll = useCallback(() => {
     const container = calendarContainerRef.current
@@ -888,29 +898,43 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         // Add 2 previous months
         for (let i = 2; i >= 1; i--) {
           const date = new Date(firstMonth.year, firstMonth.month - i, 1)
-          newMonths.push({
+          const newMonth = {
             month: date.getMonth(),
             year: date.getFullYear()
-          })
+          }
+          
+          // Check if this month already exists
+          const exists = visibleMonths.some(vm => 
+            vm.month === newMonth.month && vm.year === newMonth.year
+          )
+          
+          if (!exists) {
+            newMonths.push(newMonth)
+          }
         }
         
-        // Store current scroll position for preservation
-        const previousScrollTop = container.scrollTop
-        const previousScrollHeight = container.scrollHeight
-        
-        setVisibleMonths(prev => {
-          const updated = [...newMonths, ...prev]
-          // Limit total months to prevent memory issues
-          return updated.slice(0, MAX_VISIBLE_MONTHS)
-        })
-        
-        // Preserve scroll position after state update
-        requestAnimationFrame(() => {
-          const newScrollHeight = container.scrollHeight
-          const scrollDiff = newScrollHeight - previousScrollHeight
-          container.scrollTop = previousScrollTop + scrollDiff
+        // Only update if we have new months to add
+        if (newMonths.length > 0) {
+          // Store current scroll position for preservation
+          const previousScrollTop = container.scrollTop
+          const previousScrollHeight = container.scrollHeight
+          
+          setVisibleMonths(prev => {
+            const updated = deduplicateMonths([...newMonths, ...prev])
+            // Limit total months to prevent memory issues
+            return updated.slice(0, MAX_VISIBLE_MONTHS)
+          })
+          
+          // Preserve scroll position after state update
+          requestAnimationFrame(() => {
+            const newScrollHeight = container.scrollHeight
+            const scrollDiff = newScrollHeight - previousScrollHeight
+            container.scrollTop = previousScrollTop + scrollDiff
+            setLoadingDirection(null)
+          })
+        } else {
           setLoadingDirection(null)
-        })
+        }
       }, LOADING_DELAY)
     }
     // Check if we're near the bottom (need to load next months)
@@ -924,17 +948,29 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         // Add 2 next months
         for (let i = 1; i <= 2; i++) {
           const date = new Date(lastMonth.year, lastMonth.month + i, 1)
-          newMonths.push({
+          const newMonth = {
             month: date.getMonth(),
             year: date.getFullYear()
-          })
+          }
+          
+          // Check if this month already exists
+          const exists = visibleMonths.some(vm => 
+            vm.month === newMonth.month && vm.year === newMonth.year
+          )
+          
+          if (!exists) {
+            newMonths.push(newMonth)
+          }
         }
         
-        setVisibleMonths(prev => {
-          const updated = [...prev, ...newMonths]
-          // Limit total months to prevent memory issues
-          return updated.slice(-MAX_VISIBLE_MONTHS)
-        })
+        // Only update if we have new months to add
+        if (newMonths.length > 0) {
+          setVisibleMonths(prev => {
+            const updated = deduplicateMonths([...prev, ...newMonths])
+            // Limit total months to prevent memory issues
+            return updated.slice(-MAX_VISIBLE_MONTHS)
+          })
+        }
         
         setLoadingDirection(null)
       }, LOADING_DELAY)
@@ -973,7 +1009,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
         // Update current visible month based on the most visible section
         if (mostVisibleEntry && mostVisibleEntry.target instanceof HTMLElement) {
-          const element = mostVisibleEntry.target as HTMLElement
+          const element = mostVisibleEntry.target
           const monthData = element.getAttribute('data-month')
           if (monthData) {
             const [year, month] = monthData.split('-').map(Number)
@@ -1301,7 +1337,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               {/* Render all visible months */}
               {visibleMonths.map(({ month, year }, index) => (
                 <div 
-                  key={`month-${year}-${month}`} 
+                  key={`month-${year}-${month}-${index}`} 
                   className="month-section relative"
                   data-month={`${year}-${month}`}
                   style={{ isolation: 'isolate' }} // This creates a new stacking context
