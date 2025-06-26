@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef, useId } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -7,7 +7,9 @@ import {
   useSensors,
   useSensor,
   PointerSensor,
-  closestCenter,
+  rectIntersection,
+  getFirstCollision,
+  pointerWithin,
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
@@ -17,6 +19,49 @@ import "./calendar-responsive.css";
 import { getTaskStatusCounts } from "../../utils/calendarUtils";
 import { useTaskContext } from "../../contexts/TaskContext";
 import { useToastContext } from "../../contexts/ToastContext";
+
+// Single result collision detection to prevent multiple isOver states
+const singleResultCollisionDetection = ({
+  active,
+  collisionRect,
+  droppableRects,
+  droppableContainers,
+  pointerCoordinates,
+}: any) => {
+  // Try pointer collision first
+  const pointerCollisions = pointerWithin({
+    active,
+    collisionRect,
+    droppableRects,
+    droppableContainers,
+    pointerCoordinates,
+  })
+  
+  if (pointerCollisions.length > 0) {
+    // Sort by distance to pointer and return the closest one
+    const sorted = pointerCollisions.sort((a: any, b: any) => {
+      const rectA = droppableRects.get(a.id)
+      const rectB = droppableRects.get(b.id)
+      if (!rectA || !rectB || !pointerCoordinates) return 0
+      
+      const distanceA = Math.sqrt(
+        Math.pow(rectA.left + rectA.width/2 - pointerCoordinates.x, 2) +
+        Math.pow(rectA.top + rectA.height/2 - pointerCoordinates.y, 2)
+      )
+      const distanceB = Math.sqrt(
+        Math.pow(rectB.left + rectB.width/2 - pointerCoordinates.x, 2) +
+        Math.pow(rectB.top + rectB.height/2 - pointerCoordinates.y, 2)
+      )
+      
+      return distanceA - distanceB
+    })
+    
+    console.log('🎯 CLOSEST COLLISION:', sorted[0].id)
+    return [sorted[0]]
+  }
+  
+  return []
+}
 
 interface CalendarViewProps {
   project: Project
@@ -111,7 +156,10 @@ const DroppableCalendarCell: React.FC<{
   showWeekends: boolean
   onTaskClick?: (task: Task) => void
   onDateClick?: (date: Date) => void
-}> = ({ date, tasks, isCurrentMonth, showWeekends, onTaskClick, onDateClick }) => {
+  cellNumber?: number
+  monthId: string
+  isDroppable?: boolean
+}> = ({ date, tasks, isCurrentMonth, showWeekends, onTaskClick, onDateClick, cellNumber, monthId, isDroppable = true }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   
@@ -129,14 +177,23 @@ const DroppableCalendarCell: React.FC<{
   const day = String(date.getDate()).padStart(2, '0')
   const dateStr = `${year}-${month}-${day}`
   
+  // Use simple format for droppableId - let's test if this works better
   const droppableId = `cell-${dateStr}`
 
-  const { isOver, setNodeRef } = useDroppable({
+  // Conditionally use droppable hook only for cells that should be droppable
+  const dropResult = isDroppable ? useDroppable({
     id: droppableId,
     data: {
       date: date,
     },
-  })
+  }) : { isOver: false, setNodeRef: (node: any) => {} }
+  
+  const { isOver, setNodeRef } = dropResult
+  
+  // Re-enable hover feedback now that we have unique droppable elements
+  const isActiveDropTarget = isOver && isDroppable
+
+
 
   // Calculate visible tasks based on expansion state and available space
   const calculateMaxInitialTasks = () => {
@@ -151,12 +208,7 @@ const DroppableCalendarCell: React.FC<{
   const visibleTasks = tasks.slice(0, maxVisibleTasks)
   const hasMoreTasks = tasks.length > maxInitialTasks
 
-  // Debug logging to verify task counts
-  const debugDateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  if (tasks.length > 0) {
-    console.log(`Date: ${debugDateStr}, Total tasks: ${tasks.length}, Visible: ${visibleTasks.length}, Max initial: ${maxInitialTasks}, Has more: ${hasMoreTasks}`)
-    console.log(`Is mobile: ${isMobile}, Max initial tasks: ${maxInitialTasks}`)
-  }
+
 
   const isToday = () => {
     const today = new Date()
@@ -177,7 +229,8 @@ const DroppableCalendarCell: React.FC<{
     isToday() ? 'today' : '',
     !isCurrentMonth ? 'other-month' : '',
     isWeekend && showWeekends ? 'weekend bg-gray-50' : '',
-    isOver ? 'drag-over bg-blue-50' : ''
+    !isDroppable ? 'opacity-50 cursor-not-allowed' : '',
+    isActiveDropTarget ? 'drag-over bg-blue-50' : ''
   ].filter(Boolean).join(' ')
 
   const handleCellClick = (e: React.MouseEvent) => {
@@ -195,32 +248,40 @@ const DroppableCalendarCell: React.FC<{
     setIsExpanded(!isExpanded)
   }
 
-  return (
-    <div
-      ref={setNodeRef}
-      className={cellClasses}
-      onClick={handleCellClick}
-    >
-      <div className={`date-number text-sm mb-1 ${
-        isToday() 
-          ? 'bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-medium' 
-          : isCurrentMonth 
-            ? 'text-gray-900 font-medium' 
-            : 'text-gray-400'
-      }`}>
-        {date.getDate() === 1 ? (
-          <div className="flex flex-col items-start">
-            <span className="text-xs font-normal text-gray-500">
-              {date.toLocaleDateString('en-US', { month: 'short' })}
-            </span>
-            <span className={`font-semibold ${isToday() ? '' : 'text-gray-900'}`}>
-        {date.getDate()}
-            </span>
+        return (
+        <div
+          ref={setNodeRef}
+          className={cellClasses}
+          onClick={handleCellClick}
+        >
+          {/* Temporary visual debugging - shows cell number, date, and droppable ID 
+          {cellNumber !== undefined && (
+            <div className="absolute top-0 left-0 text-[10px] text-white bg-red-600 px-1 rounded-br z-50">
+              #{cellNumber} - {date.getDate()} - {droppableId.split('-').pop()}
+            </div>
+          )}
+          */}
+          
+          <div className={`date-number text-sm mb-1 ${
+            isToday() 
+              ? 'bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-medium' 
+              : isCurrentMonth 
+                ? 'text-gray-900 font-medium' 
+                : 'text-gray-400'
+          }`}>
+            {date.getDate() === 1 ? (
+              <div className="flex flex-col items-start">
+                <span className="text-xs font-normal text-gray-500">
+                  {date.toLocaleDateString('en-US', { month: 'short' })}
+                </span>
+                <span className={`font-semibold ${isToday() ? '' : 'text-gray-900'}`}>
+            {date.getDate()}
+                </span>
+              </div>
+            ) : (
+              date.getDate()
+            )}
           </div>
-        ) : (
-          date.getDate()
-        )}
-      </div>
       
       <div className={`task-container ${isExpanded ? 'expanded' : ''}`}>
         {visibleTasks.map((task, index) => (
@@ -403,6 +464,9 @@ const CalendarMonth: React.FC<{
   onTaskClick?: (task: Task) => void
   onDateClick?: (date: Date) => void
 }> = ({ month, year, tasks, showWeekends, isFirst = false, onTaskClick, onDateClick }) => {
+  
+  // Generate unique ID for this month instance to avoid key collisions
+  const monthId = `month-${year}-${month}`
 
   // Height synchronization removed - now using fixed CSS heights for consistency
   
@@ -537,30 +601,41 @@ const CalendarMonth: React.FC<{
       
       {/* Calendar grid */}
       <div className={`calendar-grid grid grid-cols-7 border-l border-t`}>
-        {dayGrid.map((dayInfo, index) => {
-          if (!dayInfo.isVisible) {
-            // Render hidden cell to maintain grid structure
+        {(() => {
+          return dayGrid.map((dayInfo, index) => {
+            if (!dayInfo.isVisible) {
+              // Render hidden cell to maintain grid structure
+              return (
+                <div 
+                  key={`${monthId}-hidden-${index}`}
+                  className="calendar-cell border-r border-b p-2 min-h-[100px] bg-gray-100 opacity-0 pointer-events-none"
+                />
+              )
+            }
+            
+            // CRITICAL FIX: Only make cells droppable if the date belongs to this calendar month
+            // This prevents duplicate droppable elements across months
+            const dateMonth = dayInfo.date.getMonth()
+            const calendarMonth = month
+            const isCurrentMonthDate = dateMonth === calendarMonth
+            
+            const dayTasks = getTasksForDate(dayInfo.date)
             return (
-              <div 
-                key={`hidden-${dayInfo.date.getFullYear()}-${dayInfo.date.getMonth()}-${dayInfo.date.getDate()}`}
-                className="calendar-cell border-r border-b p-2 min-h-[100px] bg-gray-100 opacity-0 pointer-events-none"
+              <DroppableCalendarCell
+                key={`${monthId}-${index}`}
+                date={dayInfo.date}
+                tasks={dayTasks}
+                isCurrentMonth={isCurrentMonth(dayInfo.date)}
+                showWeekends={showWeekends}
+                onTaskClick={onTaskClick}
+                onDateClick={onDateClick}
+                cellNumber={index} // Use index as cell number
+                monthId={monthId}
+                isDroppable={isCurrentMonthDate}
               />
             )
-          }
-          
-          const dayTasks = getTasksForDate(dayInfo.date)
-          return (
-            <DroppableCalendarCell
-              key={`${dayInfo.date.getFullYear()}-${dayInfo.date.getMonth()}-${dayInfo.date.getDate()}`}
-              date={dayInfo.date}
-              tasks={dayTasks}
-              isCurrentMonth={isCurrentMonth(dayInfo.date)}
-              showWeekends={showWeekends}
-              onTaskClick={onTaskClick}
-              onDateClick={onDateClick}
-            />
-          )
-        })}
+          })
+        })()}
       </div>
     </div>
   )
@@ -657,6 +732,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({
 
   // Handle drag start
   const handleDragStart = (event: DragStartEvent) => {
+    
     const { active } = event
     const task = active.data.current?.task as Task
     if (task) {
@@ -671,8 +747,23 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     }
   }
 
+  // Handle drag over - simplified
+  const handleDragOver = (event: any) => {
+    // Detailed logging for debugging
+    if (event.over) {
+      const overId = event.over.id
+      const dateStr = overId.replace('cell-', '')
+      const cellData = event.over.data?.current
+      console.log('🔍 DRAG OVER:')
+      console.log('  Cell ID:', overId)
+      console.log('  Extracted date:', dateStr)
+      console.log('  Cell data date:', cellData?.date?.toDateString())
+    }
+  }
+
   // Handle drag end
   const handleDragEnd = async (event: DragEndEvent) => {
+    
     const { active, over } = event
     setDraggedTask(null)
 
@@ -681,12 +772,15 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     const draggedTaskId = active.id as string
     const droppableId = over.id as string
 
-    // Debug logging
-    console.log('Dropped on cell:', droppableId)
-    
     // Extract date from droppableId (format: cell-YYYY-MM-DD)
     const cellDateStr = droppableId.replace('cell-', '')
-    console.log('Extracted date string:', cellDateStr)
+    const cellData = over.data?.current
+    
+    console.log('🎯 DRAG END:')
+    console.log('  Dropped on cell ID:', droppableId)
+    console.log('  Extracted date string:', cellDateStr)
+    console.log('  Cell data date:', cellData?.date?.toDateString())
+    console.log('  Cell data date ISO:', cellData?.date?.toISOString())
     
     // Validate date format
     if (!/^\d{4}-\d{2}-\d{2}$/.test(cellDateStr)) {
@@ -709,7 +803,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       : null
     
     if (currentTaskDate === cellDateStr) {
-      console.log('Task already on this date, no update needed')
       return
     }
 
@@ -730,7 +823,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       
       // If the month isn't visible, add it
       if (!monthExists) {
-        console.log('Adding month to visible months:', targetMonth + 1, targetYear)
         setVisibleMonths(prev => {
           const newMonths = [...prev]
           // Add the month in the correct position
@@ -751,7 +843,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({
       })
 
       showSuccess(`Task moved to ${displayDate}`)
-      console.log('Task successfully updated to:', cellDateStr)
       
     } catch (error) {
       console.error('Failed to update task date:', error)
@@ -1080,7 +1171,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({
   }
 
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext 
+      sensors={sensors}
+      collisionDetection={pointerWithin}
+      onDragStart={handleDragStart} 
+      onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+    >
       <div className="calendar-view h-full flex flex-col">
         {/* Fixed Calendar Header */}
         <div 
@@ -1204,9 +1301,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({
               {/* Render all visible months */}
               {visibleMonths.map(({ month, year }, index) => (
                 <div 
-                  key={`${year}-${month}`} 
-                  className="month-section"
+                  key={`month-${year}-${month}`} 
+                  className="month-section relative"
                   data-month={`${year}-${month}`}
+                  style={{ isolation: 'isolate' }} // This creates a new stacking context
                 >
                   <CalendarMonth 
                     month={month} 
@@ -1244,13 +1342,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
       </div>
 
-      {/* Drag Overlay */}
-      <DragOverlay>
-        {draggedTask ? (
-          <div className="calendar-task dragging">
-            {draggedTask.title}
-          </div>
-        ) : null}
+      {/* Drag Overlay - Disabled to prevent confusing visual positioning */}
+      <DragOverlay 
+        dropAnimation={null}
+        style={{ pointerEvents: 'none' }}
+      >
+        {/* No drag overlay to avoid confusing positioning - blue cell highlight is sufficient */}
+        {null}
       </DragOverlay>
     </DndContext>
   )
