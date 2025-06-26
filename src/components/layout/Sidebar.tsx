@@ -642,7 +642,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             )}
           </div>
                         <p className="text-xs text-gray-500 truncate">
-                          {user?.email || 'user@example.com'}
+                          {user?.email || 'Loading...'}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">

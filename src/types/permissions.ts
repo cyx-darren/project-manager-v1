@@ -4,7 +4,7 @@ import React from 'react'
 // Role types based on our database schema
 export type ProjectRole = 'owner' | 'admin' | 'member' | 'viewer'
 export type TeamRole = 'owner' | 'admin' | 'member'
-export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer'
+export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'billing_manager'
 
 // Enhanced permission types aligned with database schema
 export type ProjectPermission = 
@@ -184,9 +184,10 @@ export const WORKSPACE_ROLE_PERMISSIONS: Record<WorkspaceRole, WorkspacePermissi
     'workspace.view',
     'workspace.create_projects'
   ],
-  viewer: [
-    // Viewer permissions (read-only access)
-    'workspace.view'
+  billing_manager: [
+    // Billing manager permissions (billing and subscription management)
+    'workspace.view',
+    'workspace.settings'
   ]
 }
 
@@ -255,13 +256,13 @@ export const getHighestWorkspaceRole = (roles: WorkspaceRole[]): WorkspaceRole =
   const roleHierarchy: Record<WorkspaceRole, number> = {
     owner: 4,
     admin: 3,
-    member: 2,
-    viewer: 1
+    billing_manager: 2,
+    member: 1
   }
   
   return roles.reduce((highest, current) => {
     return roleHierarchy[current] > roleHierarchy[highest] ? current : highest
-  }, 'viewer')
+  }, 'member')
 }
 
 export const canRolePerformAction = (
@@ -302,8 +303,8 @@ export const canWorkspaceRolePerformAction = (
   const roleHierarchy: Record<WorkspaceRole, number> = {
     owner: 4,
     admin: 3,
-    member: 2,
-    viewer: 1
+    billing_manager: 2,
+    member: 1
   }
   
   const userLevel = roleHierarchy[userRole]
@@ -315,11 +316,11 @@ export const canWorkspaceRolePerformAction = (
     return true
   }
   
-  // Admins can manage members and viewers
+  // Admins can manage members and billing managers
   if (userRole === 'admin') {
     return targetLevel < roleHierarchy.admin
   }
   
-  // Members and viewers cannot manage others
+  // Members and billing managers cannot manage others
   return false
 } 

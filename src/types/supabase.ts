@@ -88,30 +88,30 @@ export type Database = {
       }
       board_columns: {
         Row: {
-          id: string
-          project_id: string
-          name: string
           color: string
-          position: number
           created_at: string
+          id: string
+          name: string
+          position: number
+          project_id: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          project_id: string
-          name: string
           color?: string
-          position?: number
           created_at?: string
+          id?: string
+          name: string
+          position?: number
+          project_id: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          project_id?: string
-          name?: string
           color?: string
-          position?: number
           created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          project_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -151,6 +151,117 @@ export type Database = {
           id?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      custom_permissions: {
+        Row: {
+          context_id: string
+          context_type: string
+          created_at: string | null
+          granted: boolean | null
+          granted_by: string | null
+          id: string
+          permission_id: string
+          project_id: string | null
+          user_id: string
+        }
+        Insert: {
+          context_id: string
+          context_type: string
+          created_at?: string | null
+          granted?: boolean | null
+          granted_by?: string | null
+          id?: string
+          permission_id: string
+          project_id?: string | null
+          user_id: string
+        }
+        Update: {
+          context_id?: string
+          context_type?: string
+          created_at?: string | null
+          granted?: boolean | null
+          granted_by?: string | null
+          id?: string
+          permission_id?: string
+          project_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_permissions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_versions: {
+        Row: {
+          content: Json
+          created_at: string | null
+          created_by: string
+          entity_id: string
+          entity_type: string
+          id: string
+          summary: string | null
+          version_number: number
+        }
+        Insert: {
+          content: Json
+          created_at?: string | null
+          created_by: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          summary?: string | null
+          version_number: number
+        }
+        Update: {
+          content?: Json
+          created_at?: string | null
+          created_by?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          summary?: string | null
+          version_number?: number
+        }
+        Relationships: []
+      }
+      permissions: {
+        Row: {
+          action: Database["public"]["Enums"]["permission_action"]
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["permission_action"]
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["permission_action"]
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -241,6 +352,7 @@ export type Database = {
           status: Database["public"]["Enums"]["project_status"] | null
           title: string
           updated_at: string
+          workspace_id: string | null
         }
         Insert: {
           color?: string | null
@@ -252,6 +364,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["project_status"] | null
           title: string
           updated_at?: string
+          workspace_id?: string | null
         }
         Update: {
           color?: string | null
@@ -263,8 +376,49 @@ export type Database = {
           status?: Database["public"]["Enums"]["project_status"] | null
           title?: string
           updated_at?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          context_type: string
+          created_at: string | null
+          id: string
+          permission_id: string
+          role_name: string
+        }
+        Insert: {
+          context_type: string
+          created_at?: string | null
+          id?: string
+          permission_id: string
+          role_name: string
+        }
+        Update: {
+          context_type?: string
+          created_at?: string | null
+          id?: string
+          permission_id?: string
+          role_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subtasks: {
         Row: {
@@ -480,14 +634,151 @@ export type Database = {
         }
         Relationships: []
       }
+      version_history: {
+        Row: {
+          change_type: string
+          created_at: string | null
+          field_name: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          user_id: string
+          version_id: string
+        }
+        Insert: {
+          change_type: string
+          created_at?: string | null
+          field_name: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          user_id: string
+          version_id: string
+        }
+        Update: {
+          change_type?: string
+          created_at?: string | null
+          field_name?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          user_id?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "version_history_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "document_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_members: {
+        Row: {
+          id: string
+          joined_at: string | null
+          role: Database["public"]["Enums"]["workspace_role"] | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          role?: Database["public"]["Enums"]["workspace_role"] | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          role?: Database["public"]["Enums"]["workspace_role"] | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          settings: Json | null
+          slug: string
+          subscription_expires_at: string | null
+          subscription_tier: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          settings?: Json | null
+          slug: string
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          settings?: Json | null
+          slug?: string
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      anonymize_user_data: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      create_default_workspace: {
+        Args: { p_user_id: string; p_workspace_name?: string }
+        Returns: string
+      }
+      create_document_version: {
+        Args: {
+          p_entity_type: string
+          p_entity_id: string
+          p_content: Json
+          p_summary: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_user_project_role: {
-        Args: { project_uuid: string; user_uuid: string }
-        Returns: Database["public"]["Enums"]["member_role"]
+        Args: { user_id: string; project_id: string }
+        Returns: string
+      }
+      get_user_workspace_role: {
+        Args: { user_id: string; workspace_id: string }
+        Returns: string
       }
       log_activity: {
         Args: {
@@ -499,6 +790,15 @@ export type Database = {
           p_details?: Json
         }
         Returns: string
+      }
+      user_has_permission: {
+        Args: {
+          user_id: string
+          permission_name: Database["public"]["Enums"]["permission_action"]
+          context_type?: string
+          context_id?: string
+        }
+        Returns: boolean
       }
       user_has_project_access: {
         Args: { project_uuid: string; user_uuid: string }
@@ -522,10 +822,36 @@ export type Database = {
         | "status_changed"
         | "due_date_changed"
       member_role: "owner" | "admin" | "member"
+      permission_action:
+        | "project.view"
+        | "project.edit"
+        | "project.delete"
+        | "project.manage_members"
+        | "project.manage_settings"
+        | "project.archive"
+        | "project.create_templates"
+        | "task.view"
+        | "task.create"
+        | "task.edit"
+        | "task.delete"
+        | "task.assign"
+        | "task.complete"
+        | "task.comment"
+        | "task.attach_files"
+        | "team.view"
+        | "team.edit"
+        | "team.delete"
+        | "team.manage_members"
+        | "workspace.view"
+        | "workspace.edit"
+        | "workspace.manage_members"
+        | "workspace.create_projects"
+        | "workspace.manage_billing"
       priority_level: "low" | "medium" | "high" | "urgent"
       project_status: "active" | "archived" | "completed" | "template"
       task_status: "todo" | "in_progress" | "done"
       team_role: "owner" | "admin" | "member"
+      workspace_role: "owner" | "admin" | "member" | "billing_manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -623,6 +949,21 @@ export type Enums<
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
 // Helper type aliases for easier usage
 export type Project = Tables<'projects'>
 export type ProjectInsert = TablesInsert<'projects'>
@@ -707,4 +1048,4 @@ export type PaginatedResponse<T> = ApiResponse<T[]> & {
     total: number
     hasMore: boolean
   }
-} 
+}

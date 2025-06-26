@@ -1,4 +1,5 @@
 import { supabase, getCurrentUser } from '../config/supabase'
+import { permissionService } from './permissionService'
 import type { 
   Project, 
   ProjectInsert, 
@@ -8,6 +9,7 @@ import type {
   ApiResponse,
   PaginatedResponse 
 } from '../types/supabase'
+import type { PermissionContext } from '../types/permissions'
 
 // Custom error classes
 export class ProjectError extends Error {
@@ -24,6 +26,25 @@ export class ProjectPermissionError extends Error {
   constructor(message: string = 'Insufficient permissions') {
     super(message)
     this.name = 'ProjectPermissionError'
+  }
+}
+
+// Helper function to check project permissions
+async function checkProjectPermission(
+  permission: 'project.view' | 'project.edit' | 'project.delete' | 'project.archive' | 'project.restore' | 'project.settings' | 'project.share' | 'workspace.create_projects',
+  projectId?: string,
+  workspaceId?: string
+): Promise<void> {
+  const user = await getCurrentUser()
+  if (!user) {
+    throw new ProjectPermissionError('Must be authenticated to perform project operations')
+  }
+
+  const context: PermissionContext = { projectId, workspaceId }
+  const result = await permissionService.hasPermission(user.id, permission, context)
+  
+  if (!result.hasPermission) {
+    throw new ProjectPermissionError(`Insufficient permissions: ${permission}. Required role: ${result.requiredRole || 'member'}`)
   }
 }
 
@@ -122,6 +143,9 @@ export const projectService = {
    */
   async getProjectById(id: string): Promise<ApiResponse<ProjectWithMembers>> {
     try {
+      // Check permission to view project
+      await checkProjectPermission('project.view', id)
+
       const { data, error } = await supabase
         .from('projects')
         .select(`
@@ -164,6 +188,9 @@ export const projectService = {
    */
   async getProjectWithTasks(id: string): Promise<ApiResponse<ProjectWithTasks>> {
     try {
+      // Check permission to view project
+      await checkProjectPermission('project.view', id)
+
       const { data, error } = await supabase
         .from('projects')
         .select(`
@@ -221,6 +248,11 @@ export const projectService = {
         throw new ProjectPermissionError('Must be authenticated to create projects')
       }
 
+      // Check workspace permission to create projects if workspace specified
+      if (projectData.workspace_id) {
+        await checkProjectPermission('workspace.create_projects', undefined, projectData.workspace_id)
+      }
+
       const { data, error } = await supabase
         .from('projects')
         .insert({
@@ -267,6 +299,9 @@ export const projectService = {
    */
   async updateProject(id: string, updates: ProjectUpdate): Promise<ApiResponse<Project>> {
     try {
+      // Check permission to edit project
+      await checkProjectPermission('project.edit', id)
+
       const { data, error } = await supabase
         .from('projects')
         .update({
@@ -307,6 +342,9 @@ export const projectService = {
    */
   async deleteProject(id: string): Promise<ApiResponse<boolean>> {
     try {
+      // Check permission to delete project
+      await checkProjectPermission('project.delete', id)
+
       // First, delete all project members
       await supabase
         .from('project_members')

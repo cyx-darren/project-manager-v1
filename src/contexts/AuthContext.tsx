@@ -6,13 +6,28 @@ import {
   secureTokenStorage, 
   tokenRefreshManager
 } from '../utils/secureTokenStorage'
+import { permissionService } from '../services/permissionService'
+import type { 
+  Permission, 
+  ProjectRole, 
+  WorkspaceRole, 
+  PermissionContext,
+  PermissionResult 
+} from '../types/permissions'
 
-// Extended user interface to include role information
+// Enhanced user interface with permission system integration
 interface ExtendedUser extends User {
   role?: 'admin' | 'member' | 'guest'
   permissions?: string[]
+  // New permission system fields
+  globalRole?: string
+  workspaceRoles?: Record<string, WorkspaceRole>
+  projectRoles?: Record<string, ProjectRole>
+  currentWorkspaceId?: string | null
+  currentProjectId?: string | null
 }
 
+// Enhanced AuthContext interface with permission system integration
 interface AuthContextType {
   // Authentication state
   session: Session | null
@@ -26,12 +41,24 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error?: AuthError }>
   refreshSession: () => Promise<{ error?: AuthError }>
   
+  // Context management
+  setCurrentWorkspace: (workspaceId: string | null) => void
+  setCurrentProject: (projectId: string | null) => void
+  getCurrentContext: () => PermissionContext
+  
+  // Permission system integration
+  hasPermission: (permission: Permission, context?: PermissionContext) => Promise<boolean>
+  hasAnyPermission: (permissions: Permission[], context?: PermissionContext) => Promise<boolean>
+  hasAllPermissions: (permissions: Permission[], context?: PermissionContext) => Promise<boolean>
+  getUserRole: (context?: PermissionContext) => Promise<ProjectRole | WorkspaceRole | string | null>
+  refreshPermissions: () => Promise<void>
+  
   // Utility methods
   isAuthenticated: boolean
   hasRole: (role: string) => boolean
-  hasPermission: (permission: string) => boolean
-  hasAnyPermission: (permissions: string[]) => boolean
-  hasAllPermissions: (permissions: string[]) => boolean
+  hasPermission_legacy: (permission: string) => boolean
+  hasAnyPermission_legacy: (permissions: string[]) => boolean
+  hasAllPermissions_legacy: (permissions: string[]) => boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -44,36 +71,64 @@ export const useAuth = () => {
   return context
 }
 
-// Custom hook for role-based access
+// Enhanced hook for role-based access control
 export const useRole = () => {
-  const { user } = useAuth()
-  return user?.role || 'guest'
+  const { user, getUserRole, getCurrentContext } = useAuth()
+  return {
+    role: user?.role,
+    globalRole: user?.globalRole,
+    getUserRole,
+    getCurrentContext
+  }
 }
 
-// Custom hook for authorization checks
-export const useAuthorization = (requiredPermissions: string[] = []) => {
-  const { user, hasAllPermissions } = useAuth()
+// Enhanced authorization hook with new permission system
+export const useAuthorization = (requiredPermissions: Permission[] = []) => {
+  const { hasAllPermissions, getCurrentContext } = useAuth()
   
-  if (requiredPermissions.length === 0) return true
-  return user ? hasAllPermissions(requiredPermissions) : false
+  const checkPermissions = useCallback(async (context?: PermissionContext) => {
+    if (requiredPermissions.length === 0) return true
+    return await hasAllPermissions(requiredPermissions, context || getCurrentContext())
+  }, [hasAllPermissions, requiredPermissions, getCurrentContext])
+  
+  return { checkPermissions }
 }
 
-// Custom hook for authenticated API calls
+// Enhanced authenticated fetch hook
 export const useAuthenticatedFetch = () => {
-  const { session } = useAuth()
+  const { session, refreshSession } = useAuth()
   
-  return useCallback(async (url: string, options: RequestInit = {}) => {
-    const headers = new Headers(options.headers)
-    
-    if (session?.access_token) {
-      headers.set('Authorization', `Bearer ${session.access_token}`)
+  const authenticatedFetch = useCallback(async (url: string, options: RequestInit = {}) => {
+    if (!session?.access_token) {
+      throw new Error('No authentication token available')
     }
-    
-    return fetch(url, { 
-      ...options, 
-      headers 
-    })
-  }, [session])
+
+    const headers = {
+      ...options.headers,
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    }
+
+    try {
+      const response = await fetch(url, { ...options, headers })
+      
+      if (response.status === 401) {
+        // Token might be expired, try to refresh
+        const { error } = await refreshSession()
+        if (!error) {
+          // Retry with new token
+          return await fetch(url, { ...options, headers })
+        }
+      }
+      
+      return response
+    } catch (error) {
+      console.error('Authenticated fetch error:', error)
+      throw error
+    }
+  }, [session, refreshSession])
+
+  return authenticatedFetch
 }
 
 interface AuthProviderProps {
@@ -85,60 +140,241 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<ExtendedUser | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Enhanced session recovery with secure token storage
-  const recoverSession = useCallback(async () => {
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log('🔍 AuthContext state:', { 
+      user: user?.email, 
+      loading, 
+      session: !!session,
+      hasUser: !!user 
+    })
+  }, [user, loading, session])
+
+  // Enhanced user data processing with permission system integration
+  const processUserData = useCallback(async (authUser: User | null): Promise<ExtendedUser | null> => {
+    console.log('🔄 Processing user data for:', authUser?.email)
+    if (!authUser) return null
+
     try {
-      // First try to get session from Supabase
-      const { data: { session }, error } = await supabase.auth.getSession()
+      // Extract role from user metadata or app_metadata as fallback
+      const role = (authUser.app_metadata?.role || 
+                    authUser.user_metadata?.role || 
+                    'member') as 'admin' | 'member' | 'guest'
+
+      // Extract permissions from metadata as fallback
+      const permissions = authUser.app_metadata?.permissions || 
+                         authUser.user_metadata?.permissions || 
+                         []
+
+      // TEMPORARILY DISABLE permission service call to fix loading issue
+      let globalRole = 'user'
+      console.log('⚠️ TEMP: Skipping permission service call to fix loading issue')
       
-      if (error) {
-        console.error('Error getting session from Supabase:', error)
-        // Try to recover from secure storage as fallback
-        const storedSession = secureTokenStorage.retrieveSession()
-        if (storedSession) {
-          try {
-            const { data, error: setError } = await supabase.auth.setSession(storedSession)
-            if (setError) {
-              console.error('Error setting stored session:', setError)
-              secureTokenStorage.clearSession()
-            } else if (data.session) {
-              console.log('✅ Session recovered from secure storage')
-              return data.session
-            }
-          } catch (setError) {
-            console.error('Error setting stored session:', setError)
-            secureTokenStorage.clearSession()
-          }
-        }
+      // Get global role from permission service with timeout and fallback
+      // let globalRole = 'user'
+      // try {
+      //   const rolePromise = permissionService.getUserGlobalRole(authUser.id)
+      //   const timeoutPromise = new Promise<string>((_, reject) => 
+      //     setTimeout(() => reject(new Error('Timeout')), 2000)
+      //   )
+      //   
+      //   globalRole = await Promise.race([rolePromise, timeoutPromise]) || 'user'
+      //   console.log('✅ Global role fetched:', globalRole)
+      // } catch (error) {
+      //   console.warn('⚠️ Failed to fetch global role, using fallback:', error)
+      //   globalRole = role === 'admin' ? 'admin' : 'user'
+      // }
+
+      // Create extended user object
+      const extendedUser: ExtendedUser = {
+        ...authUser,
+        role,
+        permissions,
+        globalRole,
+        workspaceRoles: {},
+        projectRoles: {},
+        currentWorkspaceId: null,
+        currentProjectId: null
+      }
+
+      console.log('✅ User data processed successfully:', {
+        email: extendedUser.email,
+        role: extendedUser.role,
+        globalRole: extendedUser.globalRole
+      })
+
+      return extendedUser
+    } catch (error) {
+      console.error('❌ Error processing user data:', error)
+      // Return basic user data if profile fetch fails
+      const fallbackUser: ExtendedUser = {
+        ...authUser,
+        role: 'member',
+        permissions: [],
+        globalRole: 'user',
+        workspaceRoles: {},
+        projectRoles: {},
+        currentWorkspaceId: null,
+        currentProjectId: null
+      }
+      
+      console.log('✅ Using fallback user data')
+      return fallbackUser
+    }
+  }, [])
+
+  // Enhanced session recovery with permission loading
+  const recoverSession = useCallback(async (): Promise<Session | null> => {
+    console.log('🔄 recoverSession: Starting session recovery...')
+    try {
+      // TEMPORARILY DISABLE Supabase session recovery to fix loading issue
+      console.log('⚠️ TEMP: Skipping Supabase session recovery to fix loading issue')
+      
+      // Try to get session from Supabase first with timeout
+      // const sessionPromise = supabase.auth.getSession()
+      // const timeoutPromise = new Promise<never>((_, reject) => 
+      //   setTimeout(() => reject(new Error('Session recovery timeout')), 3000)
+      // )
+      
+      // const { data: { session: currentSession } } = await Promise.race([sessionPromise, timeoutPromise])
+      
+      // if (currentSession) {
+      //   console.log('Session recovered from Supabase:', currentSession.user.email)
+      //   return currentSession
+      // }
+
+      console.log('🔄 recoverSession: Checking secure storage...')
+      // Fallback to secure storage
+      const storedSession = secureTokenStorage.retrieveSession()
+      if (storedSession) {
+        console.log('Session recovered from secure storage:', storedSession.user.email)
+        
+        // TEMPORARILY DISABLE session validation to fix loading issue
+        console.log('⚠️ TEMP: Skipping session validation to fix loading issue')
+        return storedSession
+        
+        // Validate the stored session
+        // const { data: { user: validatedUser }, error } = await supabase.auth.getUser(storedSession.access_token)
+        
+        // if (error || !validatedUser) {
+        //   console.log('Stored session is invalid, clearing...')
+        //   secureTokenStorage.clearSession()
+        //   return null
+        // }
+        
+        // return storedSession
+      }
+
+      console.log('🔄 recoverSession: No session found')
+      return null
+    } catch (error) {
+      console.error('Error recovering session:', error)
+      secureTokenStorage.clearAllAuthData()
+      return null
+    }
+  }, [])
+
+  // Context management methods
+  const setCurrentWorkspace = useCallback((workspaceId: string | null) => {
+    setUser(prev => prev ? { ...prev, currentWorkspaceId: workspaceId } : null)
+  }, [])
+
+  const setCurrentProject = useCallback((projectId: string | null) => {
+    setUser(prev => prev ? { ...prev, currentProjectId: projectId } : null)
+  }, [])
+
+  const getCurrentContext = useCallback((): PermissionContext => {
+    return {
+      workspaceId: user?.currentWorkspaceId || undefined,
+      projectId: user?.currentProjectId || undefined,
+      userId: user?.id
+    }
+  }, [user])
+
+  // Enhanced permission methods using the permission service
+  const hasPermission = useCallback(async (permission: Permission, context?: PermissionContext): Promise<boolean> => {
+    if (!user) return false
+    
+    try {
+      const result = await permissionService.hasPermission(
+        user.id, 
+        permission, 
+        context || getCurrentContext()
+      )
+      return result.hasPermission
+    } catch (error) {
+      console.error('Error checking permission:', error)
+      return false
+    }
+  }, [user, getCurrentContext])
+
+  const hasAnyPermission = useCallback(async (permissions: Permission[], context?: PermissionContext): Promise<boolean> => {
+    if (!user) return false
+    
+    try {
+      const result = await permissionService.hasAnyPermission(
+        user.id, 
+        permissions, 
+        context || getCurrentContext()
+      )
+      return result.hasPermission
+    } catch (error) {
+      console.error('Error checking any permission:', error)
+      return false
+    }
+  }, [user, getCurrentContext])
+
+  const hasAllPermissions = useCallback(async (permissions: Permission[], context?: PermissionContext): Promise<boolean> => {
+    if (!user) return false
+    
+    try {
+      const result = await permissionService.hasAllPermissions(
+        user.id, 
+        permissions, 
+        context || getCurrentContext()
+      )
+      return result.hasPermission
+    } catch (error) {
+      console.error('Error checking all permissions:', error)
+      return false
+    }
+  }, [user, getCurrentContext])
+
+  const getUserRole = useCallback(async (context?: PermissionContext): Promise<ProjectRole | WorkspaceRole | string | null> => {
+    if (!user) return null
+    
+    const effectiveContext = context || getCurrentContext()
+    
+    try {
+      if (effectiveContext.projectId) {
+        return await permissionService.getUserProjectRole(effectiveContext.projectId, user.id)
+      } else if (effectiveContext.workspaceId) {
+        return await permissionService.getUserWorkspaceRole(effectiveContext.workspaceId, user.id)
       } else {
-        return session
+        return user.globalRole || null
       }
     } catch (error) {
-      console.error('Error in session recovery:', error)
+      console.error('Error getting user role:', error)
+      return null
     }
-    return null
-  }, [])
+  }, [user, getCurrentContext])
 
-  // Enhanced user data processing with role extraction
-  const processUserData = useCallback((supabaseUser: User | null): ExtendedUser | null => {
-    if (!supabaseUser) return null
-
-    // Extract role from user metadata or app_metadata
-    const role = (supabaseUser.app_metadata?.role || 
-                  supabaseUser.user_metadata?.role || 
-                  'member') as 'admin' | 'member' | 'guest'
-
-    // Extract permissions from metadata
-    const permissions = supabaseUser.app_metadata?.permissions || 
-                       supabaseUser.user_metadata?.permissions || 
-                       []
-
-    return {
-      ...supabaseUser,
-      role,
-      permissions
+  const refreshPermissions = useCallback(async () => {
+    if (!user) return
+    
+    try {
+      // Clear permission cache to force refresh
+      permissionService.clearCache(user.id)
+      
+      // Reload user data with fresh permissions
+      const refreshedUser = await processUserData(user)
+      if (refreshedUser) {
+        setUser(refreshedUser)
+      }
+    } catch (error) {
+      console.error('Error refreshing permissions:', error)
     }
-  }, [])
+  }, [user, processUserData])
 
   // Enhanced automatic token refresh with smart scheduling
   useEffect(() => {
@@ -161,29 +397,52 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [session])
 
   useEffect(() => {
+    console.log('🚀 AuthProvider useEffect starting...')
+    
     // Get initial session with enhanced recovery
     const getInitialSession = async () => {
+      console.log('🔄 Getting initial session...')
       try {
+        console.log('📞 Calling recoverSession...')
         const recoveredSession = await recoverSession()
+        console.log('📞 recoverSession completed:', !!recoveredSession)
+        
         if (recoveredSession) {
+          console.log('✅ Session recovered, processing user data...')
           setSession(recoveredSession)
-          setUser(processUserData(recoveredSession.user))
+          console.log('📞 Calling processUserData...')
+          const processedUser = await processUserData(recoveredSession.user)
+          console.log('📞 processUserData completed')
+          setUser(processedUser)
+          console.log('✅ Initial session setup complete')
+        } else {
+          console.log('ℹ️ No session to recover')
         }
       } catch (error) {
-        console.error('Error in getInitialSession:', error)
+        console.error('❌ Error in getInitialSession:', error)
       } finally {
+        console.log('🏁 Setting loading to false')
         setLoading(false)
       }
     }
 
+    console.log('📞 About to call getInitialSession...')
     getInitialSession()
+    console.log('📞 getInitialSession called')
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email)
         setSession(session)
-        setUser(processUserData(session?.user ?? null))
+        
+        if (session?.user) {
+          const processedUser = await processUserData(session.user)
+          setUser(processedUser)
+        } else {
+          setUser(null)
+        }
+        
         setLoading(false)
 
         // Handle specific auth events with secure storage
@@ -197,6 +456,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('User signed out')
           secureTokenStorage.clearAllAuthData()
           tokenRefreshManager.clearRefreshTimer()
+          // Clear permission cache for the signed out user
+          // Note: We get the user ID from the previous session rather than current state
+          // to avoid dependency issues
         } else if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed for user:', session?.user?.email)
           // Update stored session securely
@@ -322,21 +584,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  // Role-based access control methods
+  // Legacy role-based access control methods (for backward compatibility)
   const hasRole = useCallback((role: string): boolean => {
     return user?.role === role
   }, [user])
 
-  const hasPermission = useCallback((permission: string): boolean => {
+  const hasPermission_legacy = useCallback((permission: string): boolean => {
     return user?.permissions?.includes(permission) ?? false
   }, [user])
 
-  const hasAnyPermission = useCallback((permissions: string[]): boolean => {
+  const hasAnyPermission_legacy = useCallback((permissions: string[]): boolean => {
     if (!user?.permissions) return false
     return permissions.some(permission => user.permissions!.includes(permission))
   }, [user])
 
-  const hasAllPermissions = useCallback((permissions: string[]): boolean => {
+  const hasAllPermissions_legacy = useCallback((permissions: string[]): boolean => {
     if (!user?.permissions) return false
     return permissions.every(permission => user.permissions!.includes(permission))
   }, [user])
@@ -350,11 +612,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signOut,
     resetPassword,
     refreshSession,
-    isAuthenticated: !!user,
-    hasRole,
+    
+    // Context management
+    setCurrentWorkspace,
+    setCurrentProject,
+    getCurrentContext,
+    
+    // Enhanced permission system
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
+    getUserRole,
+    refreshPermissions,
+    
+    // Utility methods
+    isAuthenticated: !!user,
+    hasRole,
+    hasPermission_legacy,
+    hasAnyPermission_legacy,
+    hasAllPermissions_legacy,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,5 +1,6 @@
 import { supabase, getCurrentUser } from '../config/supabase'
 import { handleTaskError, retryOperation } from '../utils/taskErrorHandler'
+import { permissionService } from './permissionService'
 import type { 
   Task, 
   TaskInsert, 
@@ -12,6 +13,7 @@ import type {
   PaginatedResponse,
   BoardColumn
 } from '../types/supabase'
+import type { PermissionContext } from '../types/permissions'
 
 // Custom error classes
 export class TaskError extends Error {
@@ -31,6 +33,25 @@ export class TaskPermissionError extends Error {
   }
 }
 
+// Helper function to check task permissions
+async function checkTaskPermission(
+  permission: 'task.view' | 'task.create' | 'task.edit' | 'task.delete' | 'task.assign' | 'task.status.change' | 'task.priority.change',
+  projectId: string,
+  taskId?: string
+): Promise<void> {
+  const user = await getCurrentUser()
+  if (!user) {
+    throw new TaskPermissionError('Must be authenticated to perform task operations')
+  }
+
+  const context: PermissionContext = { projectId, taskId }
+  const result = await permissionService.hasPermission(user.id, permission, context)
+  
+  if (!result.hasPermission) {
+    throw new TaskPermissionError(`Insufficient permissions: ${permission}. Required role: ${result.requiredRole || 'member'}`)
+  }
+}
+
 // Task service implementation
 export const taskService = {
   /**
@@ -38,6 +59,9 @@ export const taskService = {
    */
   async getTasksByProject(projectId: string): Promise<ApiResponse<Task[]>> {
     try {
+      // Check permission to view tasks
+      await checkTaskPermission('task.view', projectId)
+
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
@@ -69,6 +93,9 @@ export const taskService = {
    */
   async getTasksByColumn(projectId: string, columnId: string): Promise<ApiResponse<Task[]>> {
     try {
+      // Check permission to view tasks
+      await checkTaskPermission('task.view', projectId)
+
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
@@ -101,6 +128,9 @@ export const taskService = {
    */
   async getTasksByColumns(projectId: string): Promise<ApiResponse<Record<string, Task[]>>> {
     try {
+      // Check permission to view tasks
+      await checkTaskPermission('task.view', projectId)
+
       const { data, error } = await supabase
         .from('tasks')
         .select(`
@@ -149,6 +179,20 @@ export const taskService = {
       if (!user) {
         throw new TaskPermissionError('Must be authenticated to move tasks')
       }
+
+      // Get the task to find its project
+      const { data: task, error: taskError } = await supabase
+        .from('tasks')
+        .select('project_id')
+        .eq('id', taskId)
+        .single()
+
+      if (taskError || !task) {
+        throw new TaskError('Task not found', 'NOT_FOUND')
+      }
+
+      // Check permission to edit tasks
+      await checkTaskPermission('task.edit', task.project_id, taskId)
 
       // If no order index provided, put it at the end of the column
       let orderIndex = newOrderIndex
@@ -304,6 +348,23 @@ export const taskService = {
    */
   async getTaskById(id: string): Promise<ApiResponse<TaskWithSubtasks>> {
     try {
+      // First get the task to find its project for permission check
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .select('project_id')
+        .eq('id', id)
+        .single()
+
+      if (taskError) {
+        if (taskError.code === 'PGRST116') {
+          throw new TaskError('Task not found', 'NOT_FOUND')
+        }
+        throw new TaskError(taskError.message, taskError.code)
+      }
+
+      // Check permission to view tasks
+      await checkTaskPermission('task.view', taskData.project_id, id)
+
       const { data, error } = await supabase
         .from('tasks')
         .select(`
@@ -355,6 +416,9 @@ export const taskService = {
         throw new TaskPermissionError('Must be authenticated to create tasks')
       }
 
+      // Check permission to create tasks
+      await checkTaskPermission('task.create', taskData.project_id)
+
       const { data, error } = await supabase
         .from('tasks')
         .insert({
@@ -389,6 +453,23 @@ export const taskService = {
    */
   async updateTask(id: string, updates: TaskUpdate): Promise<ApiResponse<Task>> {
     try {
+      // First get the task to find its project for permission check
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .select('project_id')
+        .eq('id', id)
+        .single()
+
+      if (taskError) {
+        if (taskError.code === 'PGRST116') {
+          throw new TaskError('Task not found', 'NOT_FOUND')
+        }
+        throw new TaskError(taskError.message, taskError.code)
+      }
+
+      // Check permission to edit tasks
+      await checkTaskPermission('task.edit', taskData.project_id, id)
+
       const { data, error } = await supabase
         .from('tasks')
         .update({
@@ -426,6 +507,23 @@ export const taskService = {
    */
   async deleteTask(id: string): Promise<ApiResponse<boolean>> {
     try {
+      // First get the task to find its project for permission check
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .select('project_id')
+        .eq('id', id)
+        .single()
+
+      if (taskError) {
+        if (taskError.code === 'PGRST116') {
+          throw new TaskError('Task not found', 'NOT_FOUND')
+        }
+        throw new TaskError(taskError.message, taskError.code)
+      }
+
+      // Check permission to delete tasks
+      await checkTaskPermission('task.delete', taskData.project_id, id)
+
       // First, delete all subtasks
       await supabase
         .from('subtasks')
@@ -536,6 +634,9 @@ export const taskService = {
    */
   async searchTasks(projectId: string, query: string): Promise<ApiResponse<Task[]>> {
     try {
+      // Check permission to view tasks
+      await checkTaskPermission('task.view', projectId)
+
       const { data, error } = await supabase
         .from('tasks')
         .select('*')

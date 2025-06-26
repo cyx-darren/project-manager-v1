@@ -1,12 +1,21 @@
 import React, { useState } from 'react'
-import { projectService, taskService, testSupabaseConnection } from '../../services'
+import { projectService, taskService, testSupabaseConnection, collaborationService } from '../../services'
 import type { Project, Task } from '../../types/supabase'
+import { runCollaborationTests, testCollaborationFeatures } from '../../utils/collaborationTest'
+import { RealtimeDemo } from '../realtime/RealtimeDemo'
+import ConflictResolutionDemo from '../conflict/ConflictResolutionDemo'
+import { UserManagementDemo } from '../user-management/UserManagementDemo'
+import { DocumentSharingDemo } from '../document-sharing/DocumentSharingDemo'
 
 const ApiTester: React.FC = () => {
   const [results, setResults] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
+  const [showRealtimeDemo, setShowRealtimeDemo] = useState(false)
+  const [showConflictDemo, setShowConflictDemo] = useState(false)
+  const [showUserManagementDemo, setShowUserManagementDemo] = useState(false)
+  const [showDocumentSharingDemo, setShowDocumentSharingDemo] = useState(false)
 
   const addResult = (message: string) => {
     setResults(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`])
@@ -83,6 +92,68 @@ const ApiTester: React.FC = () => {
     setLoading(false)
   }
 
+  // New collaboration tests
+  const testCollaborationAPI = async () => {
+    setLoading(true)
+    addResult('🤝 Starting Collaboration API tests...')
+    
+    try {
+      // Capture console.log output
+      const originalLog = console.log
+      const logMessages: string[] = []
+      console.log = (...args) => {
+        logMessages.push(args.join(' '))
+        originalLog(...args)
+      }
+      
+      await runCollaborationTests()
+      
+      // Restore console.log
+      console.log = originalLog
+      
+      // Add captured messages to results
+      logMessages.forEach(msg => addResult(msg))
+      
+    } catch (error) {
+      addResult(`❌ Collaboration tests failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+    setLoading(false)
+  }
+
+  const testCollaborationWithProject = async () => {
+    if (projects.length === 0) {
+      addResult('❌ No projects available for collaboration testing')
+      return
+    }
+
+    setLoading(true)
+    addResult('🤝 Testing collaboration features with real project...')
+    
+    try {
+      const testProject = projects.find(p => p.title.includes('Demo')) || projects[0]
+      
+      // Capture console.log output
+      const originalLog = console.log
+      const logMessages: string[] = []
+      console.log = (...args) => {
+        logMessages.push(args.join(' '))
+        originalLog(...args)
+      }
+      
+      await testCollaborationFeatures(testProject.id)
+      
+      // Restore console.log
+      console.log = originalLog
+      
+      // Add captured messages to results
+      logMessages.forEach(msg => addResult(msg))
+      
+    } catch (error) {
+      addResult(`❌ Project collaboration tests failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+    setLoading(false)
+  }
+
   const runAllTests = async () => {
     setResults([])
     addResult('🚀 Starting comprehensive API tests...')
@@ -97,6 +168,13 @@ const ApiTester: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 500))
     
     await testCreateProject()
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // Add collaboration tests to the full test suite
+    await testCollaborationAPI()
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    await testCollaborationWithProject()
     
     addResult('🎉 All tests completed!')
   }
@@ -149,6 +227,22 @@ const ApiTester: React.FC = () => {
               Create Test Project
             </button>
             
+            <button
+              onClick={testCollaborationAPI}
+              disabled={loading}
+              className="w-full px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700 disabled:opacity-50"
+            >
+              Test Collaboration API
+            </button>
+            
+            <button
+              onClick={testCollaborationWithProject}
+              disabled={loading || projects.length === 0}
+              className="w-full px-4 py-2 bg-cyan-600 text-white rounded hover:bg-cyan-700 disabled:opacity-50"
+            >
+              Test Project Collaboration
+            </button>
+            
             <hr className="my-4" />
             
             <button
@@ -165,6 +259,38 @@ const ApiTester: React.FC = () => {
               className="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
             >
               Clear Results
+            </button>
+            
+            <hr className="my-4" />
+            
+            <button
+              onClick={() => setShowRealtimeDemo(!showRealtimeDemo)}
+              className="w-full px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 font-semibold"
+            >
+              {showRealtimeDemo ? 'Hide' : 'Show'} Real-time Demo
+            </button>
+            
+            <button
+              onClick={() => setShowConflictDemo(!showConflictDemo)}
+              className="w-full px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 font-semibold"
+            >
+              {showConflictDemo ? 'Hide' : 'Show'} Conflict Resolution Demo
+            </button>
+            
+            <button
+              onClick={() => setShowUserManagementDemo(!showUserManagementDemo)}
+              className="w-full px-4 py-2 bg-violet-600 text-white rounded hover:bg-violet-700 font-semibold"
+              data-testid="user-management-demo-button"
+            >
+              {showUserManagementDemo ? 'Hide' : 'Show'} User Management Demo
+            </button>
+            
+            <button
+              onClick={() => setShowDocumentSharingDemo(!showDocumentSharingDemo)}
+              className="w-full px-4 py-2 bg-rose-600 text-white rounded hover:bg-rose-700 font-semibold"
+              data-testid="document-sharing-demo-button"
+            >
+              {showDocumentSharingDemo ? 'Hide' : 'Show'} Document Sharing Demo
             </button>
           </div>
         </div>
@@ -223,6 +349,34 @@ const ApiTester: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+      
+      {/* Real-time Demo */}
+      {showRealtimeDemo && (
+        <div className="mt-8">
+          <RealtimeDemo />
+        </div>
+      )}
+      
+      {/* Conflict Resolution Demo */}
+      {showConflictDemo && (
+        <div className="mt-8">
+          <ConflictResolutionDemo />
+        </div>
+      )}
+      
+      {/* User Management Demo */}
+      {showUserManagementDemo && (
+        <div className="mt-8">
+          <UserManagementDemo />
+        </div>
+      )}
+      
+      {/* Document Sharing Demo */}
+      {showDocumentSharingDemo && (
+        <div className="mt-8">
+          <DocumentSharingDemo />
         </div>
       )}
     </div>

@@ -141,7 +141,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     <UserRoleBadge />
                   </div>
                   <p className="text-xs text-gray-500 truncate">
-                    {user?.email || 'user@example.com'}
+                    {user?.email || 'Loading...'}
                   </p>
                 </div>
                 <ChevronDownIcon className="hidden md:block h-4 w-4 text-gray-400" />
@@ -167,7 +167,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                             <UserRoleBadge />
                           </div>
                           <p className="text-xs text-gray-500 truncate">
-                            {user?.email || 'user@example.com'}
+                            {user?.email || 'Loading...'}
                           </p>
                         </div>
                       </div>

@@ -117,10 +117,10 @@ export const AccessDenied: React.FC<{ message?: string }> = ({
 
 // User role badge component
 export const UserRoleBadge: React.FC = () => {
-  const role = useRole()
+  const { role } = useRole()
   const { user } = useAuth()
   
-  if (!user) return null
+  if (!user || !role) return null
   
   const roleColors = {
     admin: 'bg-red-100 text-red-800',

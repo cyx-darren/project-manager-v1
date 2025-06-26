@@ -20,27 +20,37 @@ import './utils/quickAdminSetup'
 // Import and apply security enhancements
 import { CSPUtils } from './utils/secureTokenStorage'
 
-// Apply Content Security Policy for enhanced security
+console.log('🚀 Main.tsx: Starting app initialization...')
+
+// Apply CSP enhancements
 CSPUtils.applyCSSClientSide()
 
-createRoot(document.getElementById('root')!).render(
+console.log('🔒 Main.tsx: CSP enhancements applied')
+
+const root = createRoot(document.getElementById('root')!)
+
+console.log('📦 Main.tsx: Root element created, about to render app...')
+
+root.render(
   <StrictMode>
     <ErrorBoundary>
       <ThemeProvider>
-        <ToastProvider>
         <AuthProvider>
           <PermissionProvider>
             <ProjectProvider>
-                <TaskProvider>
               <SearchProvider>
-                <RouterProvider router={router} />
+                <ToastProvider>
+                  <TaskProvider>
+                    <RouterProvider router={router} />
+                  </TaskProvider>
+                </ToastProvider>
               </SearchProvider>
-                </TaskProvider>
             </ProjectProvider>
           </PermissionProvider>
         </AuthProvider>
-        </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>
-  </StrictMode>,
+  </StrictMode>
 )
+
+console.log('✅ Main.tsx: App rendered successfully')

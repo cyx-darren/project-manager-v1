@@ -18,6 +18,12 @@ import ApiTester from '../components/dev/ApiTester'
 import PermissionDemo from '../components/dev/PermissionDemo';
 import SchemaValidationTest from '../pages/SchemaValidationTest';
 import CustomKanbanTest from '../pages/CustomKanbanTest';
+import CollaborationDemo from '../pages/CollaborationDemo';
+import { VersionHistoryDemo } from '../pages/VersionHistoryDemo';
+import { WorkspaceSettings } from '../pages/WorkspaceSettings';
+import { WorkspaceList } from '../pages/WorkspaceList';
+import { AdminUserManagement } from '../pages/AdminUserManagement';
+import { AdminRLSTesting } from '../pages/AdminRLSTesting';
 
 
 // Main application routes
@@ -136,6 +142,22 @@ export const router = createBrowserRouter([
         )
       },
       {
+        path: 'workspaces',
+        element: (
+          <ProtectedRoute>
+            <WorkspaceList />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'workspaces/:workspaceId/settings',
+        element: (
+          <ProtectedRoute>
+            <WorkspaceSettings />
+          </ProtectedRoute>
+        )
+      },
+      {
         path: 'settings',
         element: (
           <ProtectedRoute>
@@ -207,6 +229,22 @@ export const router = createBrowserRouter([
             <CustomKanbanTest />
           </ProtectedRoute>
         )
+      },
+      {
+        path: 'collaboration-demo',
+        element: (
+          <ProtectedRoute>
+            <CollaborationDemo />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'version-history-demo',
+        element: (
+          <ProtectedRoute>
+            <VersionHistoryDemo />
+          </ProtectedRoute>
+        )
       }
     ]
   },
@@ -259,14 +297,22 @@ export const router = createBrowserRouter([
                 This page is only accessible to users with admin role.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
+                <a
+                  href="/admin/users"
+                  className="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  data-testid="admin-user-management-link"
+                >
                   <h3 className="font-medium text-blue-900">User Management</h3>
                   <p className="text-sm text-blue-700 mt-1">Manage user accounts and permissions</p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <h3 className="font-medium text-green-900">System Settings</h3>
-                  <p className="text-sm text-green-700 mt-1">Configure system-wide settings</p>
-                </div>
+                </a>
+                <a
+                  href="/admin/rls-testing"
+                  className="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                  data-testid="admin-rls-testing-link"
+                >
+                  <h3 className="font-medium text-green-900">RLS Testing</h3>
+                  <p className="text-sm text-green-700 mt-1">Test Row Level Security policies</p>
+                </a>
                 <div className="p-4 bg-purple-50 rounded-lg">
                   <h3 className="font-medium text-purple-900">Reports & Analytics</h3>
                   <p className="text-sm text-purple-700 mt-1">View detailed system reports</p>
@@ -279,6 +325,22 @@ export const router = createBrowserRouter([
             </div>
           </div>
         </div>
+      </AdminRoute>
+    )
+  },
+  {
+    path: '/admin/users',
+    element: (
+      <AdminRoute>
+        <AdminUserManagement />
+      </AdminRoute>
+    )
+  },
+  {
+    path: '/admin/rls-testing',
+    element: (
+      <AdminRoute>
+        <AdminRLSTesting />
       </AdminRoute>
     )
   },

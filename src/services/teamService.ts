@@ -1,5 +1,7 @@
 import { supabase } from '../config/supabase'
+import { permissionService } from './permissionService'
 import type { User } from '@supabase/supabase-js'
+import type { PermissionContext } from '../types/permissions'
 
 export type MemberRole = 'owner' | 'admin' | 'member'
 
@@ -53,6 +55,20 @@ export interface TeamInvitation {
   created_at: string
 }
 
+// Helper function to check team permissions
+async function checkTeamPermission(
+  permission: 'team.view' | 'team.invite' | 'team.remove' | 'team.role.change',
+  projectId: string,
+  userId: string
+): Promise<void> {
+  const context: PermissionContext = { projectId }
+  const result = await permissionService.hasPermission(userId, permission, context)
+  
+  if (!result.hasPermission) {
+    throw new Error(`Insufficient permissions: ${permission}. Required role: ${result.requiredRole || 'admin'}`)
+  }
+}
+
 /**
  * Team Management Service
  * Handles all team member operations including invitations, role management, and member listing
@@ -63,6 +79,15 @@ class TeamService {
    */
   async getProjectMembers(projectId: string): Promise<{ data: TeamMember[] | null; error: any }> {
     try {
+      // Get current user for permission check
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) {
+        return { data: null, error: new Error('Must be authenticated to view team members') }
+      }
+
+      // Check permission to view team
+      await checkTeamPermission('team.view', projectId, currentUser.id)
+
       // Get project members
       const { data: members, error } = await supabase
         .from('project_members')
@@ -77,9 +102,6 @@ class TeamService {
       if (!members || members.length === 0) {
         return { data: [], error: null }
       }
-
-      // Get current user to check if any members match
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
       
       // Map members to include real user data
       const enrichedMembers: TeamMember[] = members.map(member => {
@@ -163,6 +185,15 @@ class TeamService {
     role: MemberRole = 'member'
   ): Promise<{ data: TeamMember | null; error: any }> {
     try {
+      // Get current user for permission check
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) {
+        return { data: null, error: new Error('Must be authenticated to add team members') }
+      }
+
+      // Check permission to invite team members
+      await checkTeamPermission('team.invite', projectId, currentUser.id)
+
       const { data, error } = await supabase
         .from('project_members')
         .insert({
@@ -203,6 +234,15 @@ class TeamService {
     newRole: MemberRole
   ): Promise<{ data: TeamMember | null; error: any }> {
     try {
+      // Get current user for permission check
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) {
+        return { data: null, error: new Error('Must be authenticated to update member roles') }
+      }
+
+      // Check permission to change team member roles
+      await checkTeamPermission('team.role.change', projectId, currentUser.id)
+
       const { data, error } = await supabase
         .from('project_members')
         .update({ role: newRole })
@@ -240,6 +280,15 @@ class TeamService {
     userId: string
   ): Promise<{ error: any }> {
     try {
+      // Get current user for permission check
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) {
+        return { error: new Error('Must be authenticated to remove team members') }
+      }
+
+      // Check permission to remove team members
+      await checkTeamPermission('team.remove', projectId, currentUser.id)
+
       const { error } = await supabase
         .from('project_members')
         .delete()
