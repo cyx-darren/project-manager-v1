@@ -3,6 +3,7 @@ import { Layout } from '../components/layout';
 import Dashboard from '../pages/Dashboard';
 import Projects from '../pages/Projects';
 import ProjectDetail from '../pages/ProjectDetail';
+import CreateProject from '../pages/CreateProject';
 import NotFound from '../pages/NotFound';
 import Unauthorized from '../pages/Unauthorized';
 import ProtectedRoute, { AdminRoute, PermissionRoute } from '../components/ProtectedRoute';
@@ -92,10 +93,7 @@ export const router = createBrowserRouter([
         path: 'projects/new',
         element: (
           <PermissionRoute requiredPermissions={['create_projects']}>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold text-gray-900">Create New Project</h1>
-              <p className="text-gray-600 mt-2">Project creation form coming soon...</p>
-            </div>
+            <CreateProject />
           </PermissionRoute>
         )
       },
