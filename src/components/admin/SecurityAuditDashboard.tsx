@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import { Button } from '../ui/button'
 import { 
   Shield, 
   Zap, 
@@ -58,6 +57,41 @@ const CardContent = ({ children, className = '' }: { children: React.ReactNode; 
     {children}
   </div>
 )
+
+const Button = ({ children, variant = 'default', size = 'default', className = '', onClick, disabled = false, type = 'button' }: { 
+  children: React.ReactNode; 
+  variant?: 'default' | 'destructive' | 'secondary' | 'outline' | 'ghost';
+  size?: 'default' | 'sm' | 'lg';
+  className?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
+}) => {
+  const variantClasses = {
+    default: 'bg-blue-600 text-white hover:bg-blue-700 border-transparent',
+    destructive: 'bg-red-600 text-white hover:bg-red-700 border-transparent',
+    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 border-transparent',
+    outline: 'border-gray-300 text-gray-700 hover:bg-gray-50',
+    ghost: 'border-transparent text-gray-700 hover:bg-gray-100'
+  }
+  
+  const sizeClasses = {
+    default: 'px-4 py-2 text-sm',
+    sm: 'px-3 py-1.5 text-xs',
+    lg: 'px-6 py-3 text-base'
+  }
+  
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex items-center justify-center rounded-md border font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
 
 const Badge = ({ children, variant = 'default', className = '' }: { 
   children: React.ReactNode; 

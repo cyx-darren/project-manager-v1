@@ -16,15 +16,14 @@ import {
   BookOpenIcon,
   WifiIcon,
   ExclamationCircleIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  Squares2X2Icon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
-import { useProject } from '../../contexts/ProjectContext';
 import { useSidebarData } from '../../hooks/useSidebarData';
 import { 
   UserRoleBadge 
 } from '../auth/RoleGuard';
-import LoadingSpinner from '../LoadingSpinner';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -47,7 +46,7 @@ interface NavigationItem {
   requiredProjectActions?: string[];
   requireProject?: boolean;
   badge?: number | string;
-  category?: 'main' | 'work' | 'admin' | 'help';
+  category?: 'main' | 'admin' | 'help';
   isNew?: boolean;
   description?: string;
   keywords?: string[];
@@ -80,10 +79,10 @@ interface RecentItem extends NavigationItem {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { user, hasRole, hasAnyPermission_legacy, hasAllPermissions_legacy } = useAuth();
-  const { currentProject, userRoleInProject } = useProject();
+
   const { 
     projects: sidebarProjects, 
-    loading, 
+    loading,
     error: sidebarError, 
     isConnected, 
     refresh 
@@ -92,9 +91,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(['main', 'work'])
+    new Set(['main'])
   );
-  const [showRecentItems, setShowRecentItems] = useState(true);
+  const [isProjectsExpanded, setIsProjectsExpanded] = useState(false);
+
   const [navigationState, setNavigationState] = useState<NavigationState>({
     activeItem: null,
     activeCategory: null,
@@ -137,14 +137,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       keywords: ['tasks', 'work', 'assignments', 'todo']
     },
 
-    // Work Navigation
     { 
       name: 'Projects', 
       icon: FolderIcon, 
       href: '/projects', 
       shortName: 'Projects',
       public: true,
-      category: 'work',
+      category: 'main',
       description: 'Browse and manage all projects',
       keywords: ['projects', 'teams', 'collaboration']
     },
@@ -155,11 +154,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       shortName: 'Team',
       // Made public for authenticated users since this is basic navigation
       public: true,
-      category: 'work',
+      category: 'main',
       description: 'Team members and collaboration',
       keywords: ['team', 'members', 'people', 'collaboration']
     },
-
     { 
       name: 'Reports', 
       icon: ChartBarIcon, 
@@ -167,7 +165,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       shortName: 'Reports',
       // Made public for authenticated users since this is basic navigation
       public: true,
-      category: 'work',
+      category: 'main',
       description: 'Analytics and progress reports',
       keywords: ['reports', 'analytics', 'progress', 'metrics']
     },
@@ -177,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       href: '/activity', 
       shortName: 'Activity',
       public: true,
-      category: 'work',
+      category: 'main',
       isNew: true,
       description: 'User activity logs and analytics',
       keywords: ['activity', 'logs', 'history', 'actions', 'timeline']
@@ -242,7 +240,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const navigationCategories: NavigationCategory[] = [
     { name: 'Main', items: navigationItems.filter(item => item.category === 'main'), collapsible: false, defaultExpanded: true },
-    { name: 'Work', items: navigationItems.filter(item => item.category === 'work'), collapsible: true, defaultExpanded: true },
     { name: 'Admin', items: navigationItems.filter(item => item.category === 'admin'), collapsible: true, defaultExpanded: false },
     { name: 'Help', items: navigationItems.filter(item => item.category === 'help'), collapsible: true, defaultExpanded: false }
   ];
@@ -385,7 +382,144 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     return isCollapsed ? 'w-16' : 'w-80';
   };
 
+  const renderProjectsDropdown = () => {
+    const location = useLocation();
+    const isProjectsActive = location.pathname.startsWith('/projects');
+    
+    return (
+      <div key="projects-dropdown" className="relative mb-1">
+        {/* Projects Dropdown Button */}
+        <button
+          onClick={() => setIsProjectsExpanded(!isProjectsExpanded)}
+          className={`group relative flex items-center w-full h-12 px-3 rounded-lg transition-all duration-200 ${
+            isProjectsActive
+              ? 'bg-primary-50 text-primary-700'
+              : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+          } ${isCollapsed && !isMobile ? 'justify-center' : ''}`}
+        >
+          {/* Right border indicator */}
+          <div className={`absolute right-0 top-0 h-full w-0.5 transition-all duration-200 ${
+            isProjectsActive
+              ? 'bg-primary-500'
+              : 'bg-transparent group-hover:bg-gray-300'
+          }`}></div>
+          
+          {/* Icon container */}
+          <div className="relative flex items-center justify-center flex-shrink-0">
+            <FolderIcon className={`h-5 w-5 transition-colors duration-200 ${
+              isProjectsActive
+                ? 'text-primary-500'
+                : 'text-gray-400 group-hover:text-gray-500'
+            }`} />
+          </div>
+          
+          {/* Text content - hidden when collapsed on desktop */}
+          {(!isCollapsed || isMobile) && (
+            <>
+              <span className="text-sm font-medium ml-3 flex-1 min-w-0 truncate text-left">
+                Projects
+              </span>
+              <ChevronDownIcon
+                className={`ml-auto h-4 w-4 text-gray-400 transition-transform duration-200 ${
+                  isProjectsExpanded ? 'rotate-180' : ''
+                }`}
+              />
+            </>
+          )}
+          
+          {/* Collapsed state tooltip */}
+          {isCollapsed && !isMobile && (
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
+              Projects
+              <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 border-4 border-transparent border-r-gray-900"></div>
+            </div>
+          )}
+        </button>
+        
+        {/* Projects List */}
+        {isProjectsExpanded && (!isCollapsed || isMobile) && (
+          <div className="mt-1 space-y-1 pl-3">
+            {/* All Projects Link */}
+            <NavLink
+              to="/projects"
+              className={({ isActive }) => `
+                group flex items-center pl-8 pr-2 py-2 text-sm font-medium rounded-md transition-colors duration-200
+                ${isActive
+                  ? 'bg-primary-50 text-primary-700'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }
+              `}
+            >
+              <Squares2X2Icon className="mr-3 h-4 w-4" />
+              All Projects
+            </NavLink>
+            
+            {/* Loading State */}
+            {loading.projects && (
+              <div className="pl-8 pr-2 py-2 text-sm text-gray-500">
+                Loading projects...
+              </div>
+            )}
+            
+            {/* Project List */}
+            {!loading.projects && sidebarProjects.map((project) => (
+              <NavLink
+                key={project.id}
+                to={`/projects/${project.id}/board`}
+                className={({ isActive }) => `
+                  group flex items-center pl-8 pr-2 py-2 text-sm font-medium rounded-md transition-colors duration-200
+                  ${isActive
+                    ? 'bg-primary-50 text-primary-700'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                <div className={`w-2 h-2 rounded-full mr-3 ${getProjectColor(project.id)}`} />
+                <span className="truncate flex-1">{project.title}</span>
+                {project.taskCounts.total > 0 && (
+                  <span className="ml-auto text-xs text-gray-500">{project.taskCounts.total}</span>
+                )}
+              </NavLink>
+            ))}
+            
+            {/* Empty State */}
+            {!loading.projects && sidebarProjects.length === 0 && (
+              <div className="pl-8 pr-2 py-2 text-sm text-gray-500">
+                No projects yet
+              </div>
+            )}
+            
+            {/* View All Projects (if we're showing limited results) */}
+            {!loading.projects && sidebarProjects.length >= 20 && (
+              <NavLink
+                to="/projects"
+                className="group flex items-center pl-8 pr-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-md transition-colors duration-200"
+              >
+                <Squares2X2Icon className="mr-3 h-4 w-4" />
+                View All Projects ({sidebarProjects.length}+)
+              </NavLink>
+            )}
+            
+            {/* Create New Project */}
+            <button
+              onClick={() => navigate('/projects/new')}
+              className="group flex items-center w-full pl-8 pr-2 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200"
+            >
+              <PlusIcon className="mr-3 h-4 w-4" />
+              Create New Project
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderNavigationItem = (item: NavigationItem) => {
+    // Special handling for Projects item
+    if (item.name === 'Projects') {
+      return renderProjectsDropdown();
+    }
+    
     const isCurrentlyActive = navigationState.activeItem?.href === item.href;
     const { hasAccess, reason } = evaluateItemAccess(item);
     
@@ -474,9 +608,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       </div>
     );
   };
-
-  const dynamicProjects = sidebarProjects || [];
-  const projectMembers = []; // Mock data for now
 
   return (
     <>

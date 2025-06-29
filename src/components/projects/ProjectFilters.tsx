@@ -60,99 +60,101 @@ const ProjectFiltersComponent: React.FC<ProjectFiltersProps> = ({
   ]
 
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        {/* Left side - Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 flex-1">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
+    <div className="bg-white border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          {/* Left side - Search and Filters */}
+          <div className="flex flex-col sm:flex-row gap-4 flex-1">
+            {/* Search */}
+            <div className="relative flex-1 max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search projects..."
+                value={filters.search}
+                onChange={handleSearchChange}
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Search projects..."
-              value={filters.search}
-              onChange={handleSearchChange}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-400" />
+              <select
+                value={filters.status}
+                onChange={handleStatusChange}
+                className="block w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                {statusOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                    {option.count !== undefined && ` (${option.count})`}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Status Filter */}
+          {/* Right side - Sort */}
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-400" />
+            <span className="text-sm text-gray-500 whitespace-nowrap">Sort by:</span>
             <select
-              value={filters.status}
-              onChange={handleStatusChange}
+              value={`${filters.sortBy}-${filters.sortOrder}`}
+              onChange={handleSortChange}
               className="block w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             >
-              {statusOptions.map(option => (
+              {sortOptions.map(option => (
                 <option key={option.value} value={option.value}>
                   {option.label}
-                  {option.count !== undefined && ` (${option.count})`}
                 </option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Right side - Sort */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500 whitespace-nowrap">Sort by:</span>
-          <select
-            value={`${filters.sortBy}-${filters.sortOrder}`}
-            onChange={handleSortChange}
-            className="block w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            {sortOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Active Filters Display */}
+        {(filters.search || filters.status !== 'all') && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {filters.search && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                Search: "{filters.search}"
+                <button
+                  onClick={() => onFiltersChange({ ...filters, search: '' })}
+                  className="ml-1 text-indigo-600 hover:text-indigo-800"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filters.status !== 'all' && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                Status: {filters.status}
+                <button
+                  onClick={() => onFiltersChange({ ...filters, status: 'all' })}
+                  className="ml-1 text-indigo-600 hover:text-indigo-800"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {(filters.search || filters.status !== 'all') && (
+              <button
+                onClick={() => onFiltersChange({ 
+                  search: '', 
+                  status: 'all', 
+                  sortBy: 'created', 
+                  sortOrder: 'desc' 
+                })}
+                className="text-xs text-gray-500 hover:text-gray-700 underline"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* Active Filters Display */}
-      {(filters.search || filters.status !== 'all') && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {filters.search && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-              Search: "{filters.search}"
-              <button
-                onClick={() => onFiltersChange({ ...filters, search: '' })}
-                className="ml-1 text-indigo-600 hover:text-indigo-800"
-              >
-                ×
-              </button>
-            </span>
-          )}
-          {filters.status !== 'all' && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-              Status: {filters.status}
-              <button
-                onClick={() => onFiltersChange({ ...filters, status: 'all' })}
-                className="ml-1 text-indigo-600 hover:text-indigo-800"
-              >
-                ×
-              </button>
-            </span>
-          )}
-          {(filters.search || filters.status !== 'all') && (
-            <button
-              onClick={() => onFiltersChange({ 
-                search: '', 
-                status: 'all', 
-                sortBy: 'created', 
-                sortOrder: 'desc' 
-              })}
-              className="text-xs text-gray-500 hover:text-gray-700 underline"
-            >
-              Clear all filters
-            </button>
-          )}
-        </div>
-      )}
     </div>
   )
 }

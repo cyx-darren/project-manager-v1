@@ -815,7 +815,7 @@
           5,
           6
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -1051,7 +1051,7 @@
         "id": 10,
         "title": "Implement View Switching and Navigation",
         "description": "Enhance the existing ProjectTabs component with URL-based navigation and preference persistence for Board and Calendar views.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           7,
           8
@@ -1204,7 +1204,99 @@
           10
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Production Environment Variables",
+            "description": "Set up all necessary environment variables for the production environment",
+            "dependencies": [],
+            "details": "Create a comprehensive .env.production file with all required variables. Include API keys, database connection strings, authentication secrets, and any other configuration needed. Ensure sensitive information is properly secured and not committed to the repository.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Configure Supabase Production Instance",
+            "description": "Set up and configure the Supabase production environment",
+            "dependencies": [],
+            "details": "Create a dedicated Supabase production project. Configure database schemas, tables, RLS policies, and functions. Set up proper backups and monitoring. Generate and securely store production API keys and connection strings.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Set Up Vercel Production Project",
+            "description": "Create and configure the Vercel project for production deployment",
+            "dependencies": [
+              1
+            ],
+            "details": "Create a new Vercel project linked to the repository. Configure build settings, environment variables, and deployment regions. Set up proper team permissions and access controls. Configure serverless function settings if applicable.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement Domain Configuration",
+            "description": "Set up and configure custom domain for the production application",
+            "dependencies": [
+              3
+            ],
+            "details": "Purchase or configure the production domain. Set up DNS records pointing to Vercel. Configure SSL certificates. Verify domain ownership and ensure proper HTTPS setup. Test domain resolution and certificate validity.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Create CI/CD Pipeline",
+            "description": "Implement automated CI/CD workflow for testing and deployment",
+            "dependencies": [
+              3
+            ],
+            "details": "Set up GitHub Actions or similar CI/CD tool. Create workflows for automated testing, building, and deployment. Configure branch protection rules. Implement staging and production deployment pipelines with proper approval processes.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement Pre-deployment Testing",
+            "description": "Create automated tests to run before production deployment",
+            "dependencies": [
+              5
+            ],
+            "details": "Implement end-to-end tests, integration tests, and smoke tests. Configure automated testing in the CI/CD pipeline. Set up test reporting and notifications. Ensure tests run against staging environments before production deployment.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Configure Monitoring and Logging",
+            "description": "Set up production monitoring, logging, and error tracking",
+            "dependencies": [
+              3,
+              2
+            ],
+            "details": "Implement application monitoring using tools like Sentry, LogRocket, or similar. Set up database performance monitoring. Configure error notifications and alerts. Implement proper logging for debugging and audit purposes.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "Create Deployment Documentation",
+            "description": "Document the entire deployment process and configuration",
+            "dependencies": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            "details": "Create comprehensive documentation covering environment setup, deployment procedures, rollback processes, and troubleshooting guides. Include architecture diagrams, configuration details, and security considerations. Document CI/CD workflows and monitoring setup.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 12,
@@ -1461,7 +1553,7 @@
     ],
     "metadata": {
       "created": "2025-06-19T00:44:28.142Z",
-      "updated": "2025-06-29T10:11:35.370Z",
+      "updated": "2025-06-29T10:21:30.428Z",
       "description": "Tasks for master context"
     }
   }

@@ -102,34 +102,36 @@ const Breadcrumb: React.FC = () => {
   const breadcrumbs = generateBreadcrumbs();
 
   return (
-    <nav className="flex" aria-label="Breadcrumb">
-      <ol role="list" className="flex items-center space-x-2">
-        {breadcrumbs.map((item, index) => (
-          <li key={index}>
-            <div className="flex items-center">
-              {index > 0 && (
-                <ChevronRightIcon
-                  className="h-4 w-4 flex-shrink-0 text-gray-400 mr-2"
-                  aria-hidden="true"
-                />
-              )}
-              {item.href ? (
-                <Link
-                  to={item.href}
-                  className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {item.name}
-                </Link>
-              ) : (
-                <span className="text-sm font-medium text-gray-900 truncate max-w-xs">
-                  {item.name}
-                </span>
-              )}
-            </div>
-          </li>
-        ))}
-      </ol>
-    </nav>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="flex py-3" aria-label="Breadcrumb">
+        <ol role="list" className="flex items-center space-x-2">
+          {breadcrumbs.map((item, index) => (
+            <li key={index}>
+              <div className="flex items-center">
+                {index > 0 && (
+                  <ChevronRightIcon
+                    className="h-4 w-4 flex-shrink-0 text-gray-400 mr-2"
+                    aria-hidden="true"
+                  />
+                )}
+                {item.href ? (
+                  <Link
+                    to={item.href}
+                    className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    {item.name}
+                  </Link>
+                ) : (
+                  <span className="text-sm font-medium text-gray-900 truncate max-w-xs">
+                    {item.name}
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    </div>
   );
 };
 
