@@ -79,7 +79,7 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     if (!user?.id) return false
     
     try {
-      const result = await permissionService.hasPermission(user.id, permission, context)
+      const result = await permissionService.hasPermission(permission, context)
       return result.hasPermission
     } catch (error) {
       console.error('Error checking permission:', error)
@@ -109,9 +109,9 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({ children
     if (!user?.id) return false
     
     try {
-      const results = await permissionService.hasPermissions(user.id, permissions, context)
+      const results = await permissionService.hasAllPermissions(user.id, permissions, context)
       // Convert results object to array and check all permissions
-      return permissions.every(permission => results[permission]?.hasPermission === true)
+      return results.hasPermission === true
     } catch (error) {
       console.error('Error checking permissions:', error)
       return false

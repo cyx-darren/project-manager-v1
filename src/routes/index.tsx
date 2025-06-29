@@ -25,6 +25,7 @@ import { WorkspaceList } from '../pages/WorkspaceList';
 import { AdminUserManagement } from '../pages/AdminUserManagement';
 import { AdminRLSTesting } from '../pages/AdminRLSTesting';
 import { ActivityDashboard } from '../components/activity/ActivityDashboard';
+import SecurityAuditDashboard from '../components/admin/SecurityAuditDashboard';
 
 
 // Main application routes
@@ -324,10 +325,14 @@ export const router = createBrowserRouter([
                   <h3 className="font-medium text-green-900">RLS Testing</h3>
                   <p className="text-sm text-green-700 mt-1">Test Row Level Security policies</p>
                 </a>
-                <div className="p-4 bg-purple-50 rounded-lg">
-                  <h3 className="font-medium text-purple-900">Reports & Analytics</h3>
-                  <p className="text-sm text-purple-700 mt-1">View detailed system reports</p>
-                </div>
+                <a
+                  href="/admin/security-audit"
+                  className="p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                  data-testid="admin-security-audit-link"
+                >
+                  <h3 className="font-medium text-purple-900">Security & Performance Audit</h3>
+                  <p className="text-sm text-purple-700 mt-1">Comprehensive security and performance monitoring</p>
+                </a>
                 <div className="p-4 bg-orange-50 rounded-lg">
                   <h3 className="font-medium text-orange-900">Audit Logs</h3>
                   <p className="text-sm text-orange-700 mt-1">Review system activity logs</p>
@@ -352,6 +357,14 @@ export const router = createBrowserRouter([
     element: (
       <AdminRoute>
         <AdminRLSTesting />
+      </AdminRoute>
+    )
+  },
+  {
+    path: '/admin/security-audit',
+    element: (
+      <AdminRoute>
+        <SecurityAuditDashboard />
       </AdminRoute>
     )
   },

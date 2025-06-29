@@ -39,7 +39,6 @@ export const usePermission = (
     setLoading(true)
     try {
       const permissionResult = await permissionService.hasPermission(
-        user.id, 
         permission, 
         context
       )
@@ -92,7 +91,7 @@ export const useAnyPermission = (
     setLoading(true)
     try {
       const permissionResult = await permissionService.hasAnyPermission(
-        user.id, 
+        user.id,
         memoizedPermissions, 
         context
       )
@@ -297,7 +296,6 @@ export const useCanManageUser = (
       }
 
       const result = await permissionService.hasPermission(
-        user.id, 
         permission, 
         projectId ? { projectId } : undefined
       )
