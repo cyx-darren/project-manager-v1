@@ -1,6 +1,12 @@
-/// <reference types="vite/client" />
-
 interface ImportMetaEnv {
+  // Standard Vite environment variables
+  readonly DEV: boolean
+  readonly PROD: boolean
+  readonly MODE: string
+  readonly BASE_URL: string
+  readonly SSR: boolean
+  
+  // Project-specific environment variables
   readonly VITE_SUPABASE_URL: string
   readonly VITE_SUPABASE_ANON_KEY: string
   readonly VITE_BASE_URL: string
@@ -13,7 +19,9 @@ interface ImportMetaEnv {
   readonly VITE_ENABLE_DARK_MODE: string
   readonly VITE_ENABLE_TEAM_FEATURES: string
   readonly NODE_ENV: string
-  // more env variables...
+  
+  // Index signature for dynamic access
+  readonly [key: string]: any
 }
 
 interface ImportMeta {
