@@ -66,8 +66,31 @@ export type GlobalPermission =
   | 'user.manage'
   | 'workspace.create'
 
+// Legacy permission strings for backward compatibility
+export type LegacyPermission = 
+  | 'manage_users'
+  | 'create_projects' 
+  | 'view_reports'
+  | 'manage_workspace'
+  | 'view_analytics'
+  | 'edit_settings'
+  | 'delete_projects'
+  | 'invite_members'
+  | 'manage_roles'
+  | 'view_audit_logs'
+  | 'manage_billing'
+  | 'export_data'
+  | 'manage_integrations'
+  | 'view_dashboard'
+  | 'create_tasks'
+  | 'edit_tasks'
+  | 'delete_tasks'
+  | 'assign_tasks'
+  | 'view_team'
+  | 'manage_team'
+
 // Combined permission type
-export type Permission = ProjectPermission | WorkspacePermission | GlobalPermission
+export type Permission = ProjectPermission | WorkspacePermission | GlobalPermission | LegacyPermission
 
 // Enhanced permission context with workspace support
 export interface PermissionContext {

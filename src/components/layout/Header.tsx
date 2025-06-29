@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  MagnifyingGlassIcon, 
   BellIcon, 
   ChevronDownIcon,
   Bars3Icon,
@@ -12,7 +11,8 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useProject } from '../../contexts/ProjectContext';
 import { sidebarService } from '../../services/sidebarService';
-import { UserRoleBadge, AdminOnly, PermissionGuard } from '../auth';
+import { UserRoleBadge, AdminOnly } from '../auth';
+import PermissionGuard from '../auth/PermissionGuard';
 import { GlobalSearch } from '../search';
 
 interface HeaderProps {
@@ -191,7 +191,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     </button>
 
                     {/* Permission-based menu items */}
-                    <PermissionGuard requiredPermission={'user.manage'}>
+                    <PermissionGuard requiredPermission="user.manage">
                       <button
                         onClick={() => handleNavigation('/team')}
                         className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
@@ -233,7 +233,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                       >
                         Role Demo
                       </button>
-                      <PermissionGuard requiredPermission={'analytics.view'}>
+                      <PermissionGuard requiredPermission="analytics.view">
                         <button
                           onClick={() => handleNavigation('/reports')}
                           className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"

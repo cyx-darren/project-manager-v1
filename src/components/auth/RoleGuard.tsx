@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useAuth, useRole } from '../../contexts/AuthContext'
 import type { Permission } from '../../types/permissions'
+import React from 'react'
 
 interface RoleGuardProps {
   children: ReactNode
@@ -70,7 +71,7 @@ interface MemberOrAboveProps {
  * Convenience component for member or admin content
  */
 export const MemberOrAbove: React.FC<MemberOrAboveProps> = ({ children, fallback }) => {
-  const role = useRole()
+  const { role } = useRole()
   
   if (role === 'guest') {
     return <>{fallback}</>
@@ -96,8 +97,36 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
   fallback = null
 }) => {
   const { hasAllPermissions, hasAnyPermission } = useAuth()
+  const [canAccess, setCanAccess] = React.useState<boolean>(false)
+  const [isLoading, setIsLoading] = React.useState<boolean>(true)
   
-  const canAccess = requireAll ? hasAllPermissions(permissions) : hasAnyPermission(permissions)
+  React.useEffect(() => {
+    const checkPermissions = async () => {
+      setIsLoading(true)
+      try {
+        const result = requireAll 
+          ? await hasAllPermissions(permissions)
+          : await hasAnyPermission(permissions)
+        setCanAccess(result)
+      } catch (error) {
+        console.error('Permission check failed:', error)
+        setCanAccess(false)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    if (permissions.length > 0) {
+      checkPermissions()
+    } else {
+      setCanAccess(true)
+      setIsLoading(false)
+    }
+  }, [permissions, requireAll, hasAllPermissions, hasAnyPermission])
+  
+  if (isLoading) {
+    return <>{fallback}</>
+  }
   
   return canAccess ? <>{children}</> : <>{fallback}</>
 }
@@ -117,7 +146,7 @@ export const AccessDenied: React.FC<{ message?: string }> = ({
 
 // User role badge component
 export const UserRoleBadge: React.FC = () => {
-  const role = useRole()
+  const { role } = useRole()
   const { user } = useAuth()
   
   if (!user || !role) return null
