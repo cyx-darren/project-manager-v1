@@ -47,7 +47,7 @@ async function checkCollaborationPermission(
   }
 
   const context: PermissionContext = { projectId, workspaceId }
-  const result = await permissionService.hasPermission(user.id, permission, context)
+  const result = await permissionService.hasPermission(permission, context)
   
   if (!result.hasPermission) {
     throw new CollaborationPermissionError(`Insufficient permissions: ${permission}. Required role: ${result.requiredRole || 'member'}`)

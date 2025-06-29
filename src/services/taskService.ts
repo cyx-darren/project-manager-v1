@@ -46,7 +46,7 @@ async function checkTaskPermission(
   }
 
   const context: PermissionContext = { projectId, taskId }
-  const result = await permissionService.hasPermission(user.id, permission, context)
+  const result = await permissionService.hasPermission(permission, context)
   
   if (!result.hasPermission) {
     throw new TaskPermissionError(`Insufficient permissions: ${permission}. Required role: ${result.requiredRole || 'member'}`)

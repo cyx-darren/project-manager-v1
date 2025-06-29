@@ -79,7 +79,7 @@ interface RecentItem extends NavigationItem {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const { user, hasRole, hasPermission } = useAuth();
+  const { user, hasRole, hasAnyPermission_legacy, hasAllPermissions_legacy } = useAuth();
   const { currentProject, userRoleInProject } = useProject();
   const { 
     projects: sidebarProjects, 
@@ -153,7 +153,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: UsersIcon, 
       href: '/team', 
       shortName: 'Team',
-      requiredPermissions: ['view_team'],
+      // Made public for authenticated users since this is basic navigation
+      public: true,
       category: 'work',
       description: 'Team members and collaboration',
       keywords: ['team', 'members', 'people', 'collaboration']
@@ -164,23 +165,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: ChartBarIcon, 
       href: '/reports', 
       shortName: 'Reports',
-      requiredPermissions: ['view_reports'],
+      // Made public for authenticated users since this is basic navigation
+      public: true,
       category: 'work',
       description: 'Analytics and progress reports',
       keywords: ['reports', 'analytics', 'progress', 'metrics']
     },
-    // Temporarily disabled due to JSX compilation issues
-    // { 
-    //   name: 'Activity', 
-    //   icon: ClipboardDocumentListIcon, 
-    //   href: '/activity', 
-    //   shortName: 'Activity',
-    //   public: true,
-    //   category: 'work',
-    //   isNew: true,
-    //   description: 'User activity logs and analytics',
-    //   keywords: ['activity', 'logs', 'history', 'actions', 'timeline']
-    // },
+    { 
+      name: 'Activity', 
+      icon: ClipboardDocumentListIcon, 
+      href: '/activity', 
+      shortName: 'Activity',
+      public: true,
+      category: 'work',
+      isNew: true,
+      description: 'User activity logs and analytics',
+      keywords: ['activity', 'logs', 'history', 'actions', 'timeline']
+    },
 
     // Admin Navigation
     { 
@@ -273,23 +274,31 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   }, [isMobile, isOpen]);
 
   const evaluateItemAccess = (item: NavigationItem) => {
+    // Allow access to public items
     if (item.public) {
       return { hasAccess: true, reason: null };
     }
 
+    // Require authentication for non-public items
     if (!user) {
       return { hasAccess: false, reason: 'Authentication required' };
     }
 
+    // Check role requirements
     if (item.requiredRole && !hasRole(item.requiredRole)) {
       return { hasAccess: false, reason: `${item.requiredRole} role required` };
     }
 
+    // Check permission requirements using legacy synchronous methods
     if (item.requiredPermissions && item.requiredPermissions.length > 0) {
       const hasAllRequired = item.requireAllPermissions !== false;
-      const hasRequiredPermissions = hasAllRequired
-        ? item.requiredPermissions.every(permission => hasPermission(permission))
-        : item.requiredPermissions.some(permission => hasPermission(permission));
+      
+      let hasRequiredPermissions: boolean;
+      if (hasAllRequired) {
+        hasRequiredPermissions = hasAllPermissions_legacy(item.requiredPermissions);
+      } else {
+        hasRequiredPermissions = hasAnyPermission_legacy(item.requiredPermissions);
+      }
 
       if (!hasRequiredPermissions) {
         return { 

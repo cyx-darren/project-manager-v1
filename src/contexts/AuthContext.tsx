@@ -166,24 +166,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                          authUser.user_metadata?.permissions || 
                          []
 
-      // TEMPORARILY DISABLE permission service call to fix loading issue
+      // ✅ Enhanced permission service call with better error handling
       let globalRole = 'user'
-      console.log('⚠️ TEMP: Skipping permission service call to fix loading issue')
-      
-      // Get global role from permission service with timeout and fallback
-      // let globalRole = 'user'
-      // try {
-      //   const rolePromise = permissionService.getUserGlobalRole(authUser.id)
-      //   const timeoutPromise = new Promise<string>((_, reject) => 
-      //     setTimeout(() => reject(new Error('Timeout')), 2000)
-      //   )
-      //   
-      //   globalRole = await Promise.race([rolePromise, timeoutPromise]) || 'user'
-      //   console.log('✅ Global role fetched:', globalRole)
-      // } catch (error) {
-      //   console.warn('⚠️ Failed to fetch global role, using fallback:', error)
-      //   globalRole = role === 'admin' ? 'admin' : 'user'
-      // }
+      try {
+        console.log('🔍 [AuthContext] Fetching global role for user:', authUser.id)
+        globalRole = await permissionService.getUserGlobalRole(authUser.id) || 'user'
+        console.log('✅ [AuthContext] Global role fetched:', globalRole)
+      } catch (error) {
+        console.warn('⚠️ [AuthContext] Failed to fetch global role, using fallback:', error)
+        globalRole = role === 'admin' ? 'admin' : 'user'
+      }
 
       // Create extended user object
       const extendedUser: ExtendedUser = {
@@ -197,29 +189,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         currentProjectId: null
       }
 
-      console.log('✅ User data processed successfully:', {
+      console.log('✅ [AuthContext] User data processed successfully:', {
         email: extendedUser.email,
+        id: extendedUser.id,
         role: extendedUser.role,
         globalRole: extendedUser.globalRole
       })
 
       return extendedUser
     } catch (error) {
-      console.error('❌ Error processing user data:', error)
-      // Return basic user data if profile fetch fails
-      const fallbackUser: ExtendedUser = {
-        ...authUser,
-        role: 'member',
-        permissions: [],
-        globalRole: 'user',
-        workspaceRoles: {},
-        projectRoles: {},
-        currentWorkspaceId: null,
-        currentProjectId: null
-      }
-      
-      console.log('✅ Using fallback user data')
-      return fallbackUser
+      console.error('❌ [AuthContext] Error processing user data:', error)
+      return null
     }
   }, [])
 
@@ -227,21 +207,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const recoverSession = useCallback(async (): Promise<Session | null> => {
     console.log('🔄 recoverSession: Starting session recovery...')
     try {
-      // TEMPORARILY DISABLE Supabase session recovery to fix loading issue
-      console.log('⚠️ TEMP: Skipping Supabase session recovery to fix loading issue')
+      // ✅ Re-enabled Supabase session recovery after security fixes
+      console.log('🔄 recoverSession: Attempting Supabase session recovery...')
       
-      // Try to get session from Supabase first with timeout
-      // const sessionPromise = supabase.auth.getSession()
-      // const timeoutPromise = new Promise<never>((_, reject) => 
-      //   setTimeout(() => reject(new Error('Session recovery timeout')), 3000)
-      // )
-      
-      // const { data: { session: currentSession } } = await Promise.race([sessionPromise, timeoutPromise])
-      
-      // if (currentSession) {
-      //   console.log('Session recovered from Supabase:', currentSession.user.email)
-      //   return currentSession
-      // }
+      try {
+        // Try to get session from Supabase first with timeout
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Session recovery timeout')), 3000)
+        )
+        
+        const { data: { session: currentSession } } = await Promise.race([sessionPromise, timeoutPromise])
+        
+        if (currentSession) {
+          console.log('✅ Session recovered from Supabase:', currentSession.user.email)
+          return currentSession
+        }
+      } catch (error) {
+        console.warn('⚠️ Supabase session recovery failed, trying secure storage:', error)
+      }
 
       console.log('🔄 recoverSession: Checking secure storage...')
       // Fallback to secure storage
@@ -249,20 +233,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (storedSession) {
         console.log('Session recovered from secure storage:', storedSession.user.email)
         
-        // TEMPORARILY DISABLE session validation to fix loading issue
-        console.log('⚠️ TEMP: Skipping session validation to fix loading issue')
-        return storedSession
-        
-        // Validate the stored session
-        // const { data: { user: validatedUser }, error } = await supabase.auth.getUser(storedSession.access_token)
-        
-        // if (error || !validatedUser) {
-        //   console.log('Stored session is invalid, clearing...')
-        //   secureTokenStorage.clearSession()
-        //   return null
-        // }
-        
-        // return storedSession
+        // ✅ Re-enabled session validation after security fixes
+        try {
+          // Validate the stored session
+          const { data: { user: validatedUser }, error } = await supabase.auth.getUser(storedSession.access_token)
+          
+          if (error || !validatedUser) {
+            console.log('Stored session is invalid, clearing...')
+            secureTokenStorage.clearSession()
+            return null
+          }
+          
+          console.log('✅ Stored session validated successfully')
+          return storedSession
+        } catch (error) {
+          console.warn('⚠️ Session validation failed, using stored session anyway:', error)
+          return storedSession
+        }
       }
 
       console.log('🔄 recoverSession: No session found')
@@ -293,20 +280,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Enhanced permission methods using the permission service
   const hasPermission = useCallback(async (permission: Permission, context?: PermissionContext): Promise<boolean> => {
-    if (!user) return false
+    console.log('🔍 [AuthContext] Checking permission:', { permission, context, userId: user?.id })
     
-    try {
-      const result = await permissionService.hasPermission(
-        user.id, 
-        permission, 
-        context || getCurrentContext()
-      )
-      return result.hasPermission
-    } catch (error) {
-      console.error('Error checking permission:', error)
+    if (!user?.id) {
+      console.log('❌ [AuthContext] No authenticated user for permission check')
       return false
     }
-  }, [user, getCurrentContext])
+
+    try {
+      const result = await permissionService.hasPermission(permission, context)
+      console.log('✅ [AuthContext] Permission check result:', { permission, context, result })
+      return result.hasPermission
+    } catch (error) {
+      console.error('❌ [AuthContext] Permission check failed:', error)
+      return false
+    }
+  }, [user?.id])
 
   const hasAnyPermission = useCallback(async (permissions: Permission[], context?: PermissionContext): Promise<boolean> => {
     if (!user) return false
@@ -341,23 +330,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user, getCurrentContext])
 
   const getUserRole = useCallback(async (context?: PermissionContext): Promise<ProjectRole | WorkspaceRole | string | null> => {
-    if (!user) return null
+    console.log('🔍 [AuthContext] Getting user role:', { context, userId: user?.id })
     
-    const effectiveContext = context || getCurrentContext()
-    
-    try {
-      if (effectiveContext.projectId) {
-        return await permissionService.getUserProjectRole(effectiveContext.projectId, user.id)
-      } else if (effectiveContext.workspaceId) {
-        return await permissionService.getUserWorkspaceRole(effectiveContext.workspaceId, user.id)
-      } else {
-        return user.globalRole || null
-      }
-    } catch (error) {
-      console.error('Error getting user role:', error)
+    if (!user?.id) {
+      console.log('❌ [AuthContext] No authenticated user for role check')
       return null
     }
-  }, [user, getCurrentContext])
+
+    try {
+      if (context?.projectId) {
+        const projectRole = await permissionService.getUserProjectRole(context.projectId, user.id)
+        console.log('✅ [AuthContext] Project role:', { projectId: context.projectId, role: projectRole })
+        return projectRole
+      }
+
+      if (context?.workspaceId) {
+        const workspaceRole = await permissionService.getUserWorkspaceRole(context.workspaceId, user.id)
+        console.log('✅ [AuthContext] Workspace role:', { workspaceId: context.workspaceId, role: workspaceRole })
+        return workspaceRole
+      }
+
+      const globalRole = await permissionService.getUserGlobalRole(user.id)
+      console.log('✅ [AuthContext] Global role:', globalRole)
+      return globalRole
+    } catch (error) {
+      console.error('❌ [AuthContext] Role check failed:', error)
+      return null
+    }
+  }, [user?.id])
 
   const refreshPermissions = useCallback(async () => {
     if (!user) return

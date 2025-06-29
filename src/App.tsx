@@ -1,9 +1,3 @@
-// Import Supabase connection test (runs automatically in development)
-import './utils/supabaseTest.js';
-// Import comprehensive health check
-import { logHealthCheck } from './utils/appHealthCheck';
-
-// Run health check in development mode
-if (import.meta.env.DEV) {
-  logHealthCheck();
-}
+// Note: Auto-running imports disabled to prevent startup issues
+// To run health checks, call manually in console:
+// import { logHealthCheck } from './utils/appHealthCheck'; logHealthCheck();

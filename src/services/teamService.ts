@@ -62,7 +62,7 @@ async function checkTeamPermission(
   userId: string
 ): Promise<void> {
   const context: PermissionContext = { projectId }
-  const result = await permissionService.hasPermission(userId, permission, context)
+  const result = await permissionService.hasPermission(permission, context)
   
   if (!result.hasPermission) {
     throw new Error(`Insufficient permissions: ${permission}. Required role: ${result.requiredRole || 'admin'}`)
