@@ -44,9 +44,9 @@ root.render(
               <SearchProvider>
                 <ToastProvider>
                   <CollaborativeNotificationsProvider>
-                    <TaskProvider>
-                      <RouterProvider router={router} />
-                    </TaskProvider>
+                  <TaskProvider>
+                    <RouterProvider router={router} />
+                  </TaskProvider>
                   </CollaborativeNotificationsProvider>
                 </ToastProvider>
               </SearchProvider>

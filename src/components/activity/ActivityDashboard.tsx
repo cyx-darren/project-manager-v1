@@ -35,25 +35,38 @@ export const ActivityDashboard = () => {
         throw new Error('Must be authenticated')
       }
 
+      console.log('🔍 Loading dashboard data for user:', user.id)
+
       // Load activity stats and user summary in parallel
       const [statsResult, summaryResult] = await Promise.all([
         activityService.getActivityStats(),
         activityService.getUserActivitySummary(user.id)
       ])
 
+      console.log('📊 Activity stats result:', statsResult)
+      console.log('👤 User summary result:', summaryResult)
+
       if (statsResult.success && statsResult.data) {
+        console.log('✅ Setting stats:', statsResult.data)
         setStats(statsResult.data)
       } else {
-        console.warn('Failed to load activity stats:', statsResult.error)
+        console.warn('❌ Failed to load activity stats:', statsResult.error)
       }
 
       if (summaryResult.success && summaryResult.data) {
+        console.log('✅ Setting user summary:', summaryResult.data)
         setUserSummary(summaryResult.data)
       } else {
-        console.warn('Failed to load user summary:', summaryResult.error)
+        console.warn('❌ Failed to load user summary:', summaryResult.error)
+      }
+
+      // If both failed but no error was thrown, show a helpful message
+      if (!statsResult.success && !summaryResult.success) {
+        setError(`Failed to load data: Stats - ${statsResult.error}, Summary - ${summaryResult.error}`)
       }
 
     } catch (err) {
+      console.error('💥 Dashboard load error:', err)
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
     } finally {
       setLoading(false)

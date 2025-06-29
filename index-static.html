@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asana App Test</title>
+    <style>
+        body { 
+            font-family: system-ui, sans-serif; 
+            padding: 20px; 
+            background: #f0f9ff; 
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .success { 
+            color: #059669; 
+            font-size: 28px; 
+            margin-bottom: 20px;
+        }
+        .test-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .test-btn:hover {
+            background: #2563eb;
+        }
+        .info {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="success">✅ Static HTML Test Working!</h1>
+        
+        <div class="info">
+            <p><strong>This confirms:</strong></p>
+            <ul>
+                <li>Your browser can load local files</li>
+                <li>HTML/CSS/JavaScript work fine</li>
+                <li>The issue is with the development server</li>
+            </ul>
+        </div>
+
+        <p>Now let's test React with CDN to bypass the build system entirely:</p>
+        
+        <div id="react-test">Loading React...</div>
+        
+        <button class="test-btn" onclick="testBasicJS()">Test Basic JavaScript</button>
+        <button class="test-btn" onclick="openViteApp()">Try Opening Vite App</button>
+        
+        <div id="output" style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 4px; min-height: 50px;"></div>
+    </div>
+
+    <script type="module">
+        // Test React with CDN
+        try {
+            const { createElement, useState } = await import('https://esm.sh/react@19.1.0');
+            const { createRoot } = await import('https://esm.sh/react-dom@19.1.0/client');
+            
+            function ReactTestComponent() {
+                const [count, setCount] = useState(0);
+                
+                return createElement('div', { style: { background: '#dcfce7', padding: '15px', borderRadius: '6px', margin: '10px 0' } },
+                    createElement('h3', { style: { color: '#059669', margin: '0 0 10px 0' } }, '🚀 React 19 CDN Test Success!'),
+                    createElement('p', null, `Button clicked: ${count} times`),
+                    createElement('button', { 
+                        onClick: () => setCount(count + 1),
+                        style: { 
+                            background: '#059669', 
+                            color: 'white', 
+                            border: 'none', 
+                            padding: '8px 16px', 
+                            borderRadius: '4px', 
+                            cursor: 'pointer' 
+                        }
+                    }, 'Click me!')
+                );
+            }
+            
+            const root = createRoot(document.getElementById('react-test'));
+            root.render(createElement(ReactTestComponent));
+            
+            console.log('✅ React 19 CDN test successful!');
+            
+        } catch (error) {
+            document.getElementById('react-test').innerHTML = `
+                <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 6px; color: #dc2626;">
+                    <strong>React CDN Test Failed:</strong><br>
+                    ${error.message}
+                </div>
+            `;
+            console.error('React CDN test failed:', error);
+        }
+    </script>
+
+    <script>
+        function testBasicJS() {
+            const output = document.getElementById('output');
+            output.innerHTML = `
+                <div style="color: #059669;">
+                    <strong>✅ Basic JavaScript Working!</strong><br>
+                    Time: ${new Date().toLocaleTimeString()}<br>
+                    This proves the browser environment is fine.
+                </div>
+            `;
+        }
+
+        function openViteApp() {
+            const output = document.getElementById('output');
+            output.innerHTML = `
+                <div style="color: #3b82f6;">
+                    <strong>🔄 Attempting to open Vite app...</strong><br>
+                    If this fails, the issue is confirmed to be the development server.
+                </div>
+            `;
+            
+            // Try multiple common ports
+            const ports = [3000, 3001, 5173, 5174, 5175];
+            ports.forEach(port => {
+                setTimeout(() => {
+                    window.open(`http://localhost:${port}`, '_blank');
+                }, 500);
+            });
+        }
+
+        // Auto-run basic test
+        setTimeout(testBasicJS, 1000);
+    </script>
+</body>
+</html>

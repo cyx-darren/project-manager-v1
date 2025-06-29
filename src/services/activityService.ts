@@ -318,10 +318,15 @@ class ActivityService {
     }
   ): Promise<ApiResponse<ActivityStats>> {
     try {
+      console.log('🔍 ActivityService.getActivityStats called with:', { projectId, userId, dateRange })
+      
       const user = await getCurrentUser()
       if (!user) {
+        console.error('❌ No authenticated user found')
         throw new Error('Must be authenticated')
       }
+
+      console.log('✅ Authenticated user:', user.id)
 
       let baseQuery = supabase
         .from('activity_logs')
@@ -338,11 +343,15 @@ class ActivityService {
         .gte('created_at', dateRange.from)
         .lte('created_at', dateRange.to)
 
+      console.log('🔍 Executing activity_logs query...')
       const { data: activities, error } = await baseQuery
 
       if (error) {
+        console.error('❌ Supabase query error:', error)
         throw new Error(error.message)
       }
+
+      console.log(`✅ Found ${activities?.length || 0} activities`)
 
       // Calculate statistics
       const now = new Date()
@@ -361,6 +370,8 @@ class ActivityService {
         activityByDay: this.calculateActivityByDay(activities || [])
       }
 
+      console.log('📊 Calculated stats:', stats)
+
       return {
         data: stats,
         error: null,
@@ -368,6 +379,7 @@ class ActivityService {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch activity stats'
+      console.error('💥 ActivityService.getActivityStats error:', message, error)
       return {
         data: null,
         error: message,
@@ -379,42 +391,54 @@ class ActivityService {
   /**
    * Get user activity summary
    */
-  async getUserActivitySummary(userId: string): Promise<ApiResponse<UserActivitySummary>> {
+  async getUserActivitySummary(
+    userId: string,
+    dateRange: { from: string; to: string } = {
+      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      to: new Date().toISOString()
+    }
+  ): Promise<ApiResponse<UserActivitySummary>> {
     try {
+      console.log('🔍 ActivityService.getUserActivitySummary called with:', { userId, dateRange })
+      
       const user = await getCurrentUser()
       if (!user) {
+        console.error('❌ No authenticated user found')
         throw new Error('Must be authenticated')
       }
 
-      // Get user's activities
+      console.log('✅ Authenticated user:', user.id, 'fetching data for:', userId)
+
+      console.log('🔍 Executing user activity query...')
       const { data: activities, error } = await supabase
         .from('activity_logs')
         .select('*')
         .eq('user_id', userId)
+        .gte('created_at', dateRange.from)
+        .lte('created_at', dateRange.to)
         .order('created_at', { ascending: false })
 
       if (error) {
+        console.error('❌ Supabase user activity query error:', error)
         throw new Error(error.message)
       }
 
-      // Get user details from auth.users metadata
+      console.log(`✅ Found ${activities?.length || 0} user activities`)
+
+      // Get user details
       const { data: userData } = await supabase.auth.admin.getUserById(userId)
       const userName = userData?.user?.user_metadata?.full_name || userData?.user?.email || 'Unknown User'
-
-      // Calculate activity breakdown
-      const activityBreakdown = this.calculateActivityBreakdown(activities || [])
-
-      // Find most active project
-      const mostActiveProject = await this.findMostActiveProject(activities || [])
 
       const summary: UserActivitySummary = {
         userId,
         userName,
         totalActivities: activities?.length || 0,
-        recentActivities: (activities || []).slice(0, 10),
-        mostActiveProject,
-        activityBreakdown
+        recentActivities: activities?.slice(0, 10) || [],
+        activityBreakdown: this.calculateActivityBreakdown(activities || []),
+        mostActiveProject: await this.findMostActiveProject(activities || [])
       }
+
+      console.log('👤 Calculated user summary:', summary)
 
       return {
         data: summary,
@@ -423,6 +447,7 @@ class ActivityService {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to fetch user activity summary'
+      console.error('💥 ActivityService.getUserActivitySummary error:', message, error)
       return {
         data: null,
         error: message,
@@ -738,6 +763,8 @@ class ActivityService {
       activityCount
     }
   }
+
+
 }
 
 export const activityService = new ActivityService() 

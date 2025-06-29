@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test App</title>
+    <style>
+        body { 
+            font-family: system-ui; 
+            padding: 20px; 
+            background: #f0f0f0; 
+        }
+        .success { 
+            color: green; 
+            font-size: 24px; 
+        }
+    </style>
+</head>
+<body>
+    <div id="root">Loading...</div>
+    
+    <script type="module">
+        import { createElement } from 'https://esm.sh/react@19.1.0';
+        import { createRoot } from 'https://esm.sh/react-dom@19.1.0/client';
+        
+        const App = () => {
+            return createElement('div', { className: 'success' }, 
+                '✅ React 19 CDN Test Working!',
+                createElement('p', null, 'This proves React 19 can load.'),
+                createElement('button', { 
+                    onClick: () => alert('React event works!') 
+                }, 'Test Button')
+            );
+        };
+        
+        const root = createRoot(document.getElementById('root'));
+        root.render(createElement(App));
+    </script>
+</body>
+</html>

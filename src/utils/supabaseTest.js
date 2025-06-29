@@ -1,4 +1,4 @@
-import { testSupabaseConnection } from '../config/supabase.js'
+import { testSupabaseConnection } from '../config/supabase.ts'
 
 /**
  * Test Supabase connection and log results
@@ -23,7 +23,8 @@ export const runSupabaseConnectionTest = async () => {
   }
 }
 
-// Auto-run test in development mode
-if (import.meta.env.DEV) {
-  runSupabaseConnectionTest()
-} 
+// Note: Auto-run disabled to prevent startup issues
+// To test connection, call runSupabaseConnectionTest() manually in console
+// if (import.meta.env.DEV) {
+//   runSupabaseConnectionTest()
+// } 

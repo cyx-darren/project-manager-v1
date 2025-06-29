@@ -211,14 +211,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🔄 recoverSession: Attempting Supabase session recovery...')
       
       try {
-        // Try to get session from Supabase first with timeout
+      // Try to get session from Supabase first with timeout
         const sessionPromise = supabase.auth.getSession()
         const timeoutPromise = new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Session recovery timeout')), 3000)
         )
-        
+      
         const { data: { session: currentSession } } = await Promise.race([sessionPromise, timeoutPromise])
-        
+      
         if (currentSession) {
           console.log('✅ Session recovered from Supabase:', currentSession.user.email)
           return currentSession
@@ -235,9 +235,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // ✅ Re-enabled session validation after security fixes
         try {
-          // Validate the stored session
+        // Validate the stored session
           const { data: { user: validatedUser }, error } = await supabase.auth.getUser(storedSession.access_token)
-          
+        
           if (error || !validatedUser) {
             console.log('Stored session is invalid, clearing...')
             secureTokenStorage.clearSession()
@@ -286,7 +286,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('❌ [AuthContext] No authenticated user for permission check')
       return false
     }
-
+    
     try {
       const result = await permissionService.hasPermission(permission, context)
       console.log('✅ [AuthContext] Permission check result:', { permission, context, result })
@@ -336,7 +336,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('❌ [AuthContext] No authenticated user for role check')
       return null
     }
-
+    
     try {
       if (context?.projectId) {
         const projectRole = await permissionService.getUserProjectRole(context.projectId, user.id)
