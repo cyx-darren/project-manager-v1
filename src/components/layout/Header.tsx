@@ -191,13 +191,12 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     </button>
 
                     {/* Permission-based menu items */}
-                    <PermissionGuard permissions={['manage_users']}>
+                    <PermissionGuard requiredPermission={'user.manage'}>
                       <button
                         onClick={() => handleNavigation('/team')}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
                       >
-                        <UserIcon className="h-4 w-4 mr-3 text-gray-400" />
-                        Team Management
+                        Team
                       </button>
                     </PermissionGuard>
 
@@ -230,16 +229,16 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                       </button>
                       <button
                         onClick={() => handleNavigation('/role-demo')}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
+                        className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                      >
                         Role Demo
                       </button>
-                      <PermissionGuard permissions={['view_reports']}>
+                      <PermissionGuard requiredPermission={'analytics.view'}>
                         <button
                           onClick={() => handleNavigation('/reports')}
-                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      Reports (Permission Demo)
+                          className="flex items-center w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                        >
+                          Reports
                         </button>
                       </PermissionGuard>
                     </div>

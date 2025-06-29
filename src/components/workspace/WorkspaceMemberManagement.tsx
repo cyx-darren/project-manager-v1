@@ -104,7 +104,8 @@ export const WorkspaceMemberManagement: React.FC<WorkspaceMemberManagementProps>
       owner: 'Owner',
       admin: 'Admin',
       member: 'Member',
-      viewer: 'Viewer'
+      viewer: 'Viewer',
+      billing_manager: 'Billing Manager'
     }
     return roleNames[role] || role
   }
@@ -114,7 +115,8 @@ export const WorkspaceMemberManagement: React.FC<WorkspaceMemberManagementProps>
       owner: 'bg-purple-100 text-purple-800',
       admin: 'bg-blue-100 text-blue-800',
       member: 'bg-green-100 text-green-800',
-      viewer: 'bg-gray-100 text-gray-800'
+      viewer: 'bg-gray-100 text-gray-800',
+      billing_manager: 'bg-yellow-100 text-yellow-800'
     }
     return colors[role] || 'bg-gray-100 text-gray-800'
   }
@@ -243,14 +245,14 @@ export const WorkspaceMemberManagement: React.FC<WorkspaceMemberManagementProps>
                   {member.user?.email}
                 </div>
                 <div className="text-xs text-gray-400">
-                  Joined {new Date(member.joined_at).toLocaleDateString()}
+                  Joined {member.joined_at ? new Date(member.joined_at).toLocaleDateString() : 'Unknown'}
                 </div>
               </div>
             </div>
 
             <div className="flex items-center space-x-3">
               {/* Role Badge/Selector */}
-              {canChangeRole(member) ? (
+              {canChangeRole(member) && member.role ? (
                 <select
                   value={member.role}
                   onChange={(e) => handleRoleChange(member.id, member.user_id, e.target.value as WorkspaceRole)}
@@ -261,19 +263,23 @@ export const WorkspaceMemberManagement: React.FC<WorkspaceMemberManagementProps>
                   <option value="admin">Admin</option>
                   {userRole === 'owner' && <option value="owner">Owner</option>}
                 </select>
-              ) : (
+              ) : member.role ? (
                 <span
                   className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(member.role)}`}
                   data-testid={`role-badge-${member.user_id}`}
                 >
                   {getRoleDisplayName(member.role)}
                 </span>
+              ) : (
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                  No Role
+                </span>
               )}
 
               {/* Remove Button */}
               {canRemove(member) && (
                 <button
-                  onClick={() => handleRemoveMember(member.id, member.user_id, member.user?.full_name || member.user?.email)}
+                  onClick={() => handleRemoveMember(member.id, member.user_id, member.user?.full_name || member.user?.email || undefined)}
                   className="text-sm text-red-600 hover:text-red-800"
                   data-testid={`remove-member-${member.user_id}`}
                 >

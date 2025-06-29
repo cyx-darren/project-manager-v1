@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useAuth, useRole, useAuthorization } from '../../contexts/AuthContext'
+import { useAuth, useRole } from '../../contexts/AuthContext'
 import type { Permission } from '../../types/permissions'
 
 interface RoleGuardProps {
