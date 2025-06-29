@@ -33,7 +33,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
   onEditTask,
   onTaskDeleted,
   onCreateTask,
-  onColumnUpdated,
+  onColumnUpdated: _onColumnUpdated,
   onColumnDeleted,
   activeTaskId,
   overId: _overId,
@@ -42,7 +42,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
   isLoading: _isLoading = false
 }) => {
   const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(column.name)
+  const [_editValue, _setEditValue] = useState(column.name)
   const [showMenu, setShowMenu] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const editInputRef = useRef<HTMLInputElement>(null)
@@ -124,31 +124,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
     setShowMenu(false)
   }
 
-  const _handleEditSave = async () => {
-    const trimmedValue = editValue.trim()
-    if (trimmedValue && trimmedValue !== column.name) {
-      try {
-        const response = await BoardColumnService.updateColumn(column.id, {
-          name: trimmedValue
-        })
-        if (response.success && response.data) {
-          onColumnUpdated(response.data)
-        } else {
-          console.error('Failed to update column:', response.error)
-          setEditValue(column.name)
-        }
-      } catch (error) {
-        console.error('Error updating column:', error)
-        setEditValue(column.name)
-      }
-    }
-    setIsEditing(false)
-  }
-
-  const _handleEditCancel = () => {
-    setEditValue(column.name)
-    setIsEditing(false)
-  }
+  // Edit handlers removed - not currently used in this component
 
   const handleDelete = async () => {
     if (!canManageColumns || isDeleting) return

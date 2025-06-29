@@ -126,7 +126,7 @@ const SearchResults: React.FC<SearchResultsProps> = React.memo(({
           </div>
           {groupedResults.projects.map((result) => {
             const isSelected = currentIndex === selectedIndex
-            const itemIndex = currentIndex++
+            const _itemIndex = currentIndex++
             
             return (
               <button
@@ -176,7 +176,7 @@ const SearchResults: React.FC<SearchResultsProps> = React.memo(({
           </div>
           {groupedResults.tasks.map((result) => {
             const isSelected = currentIndex === selectedIndex
-            const itemIndex = currentIndex++
+            const _itemIndex = currentIndex++
             
             return (
               <button

@@ -257,7 +257,7 @@ export class VersionHistoryService {
 
       // Get versions to delete (everything after keepCount)
       const versionsToDelete = versions.slice(keepCount);
-      const idsToDelete = versionsToDelete.map((v: DocumentVersion) => v.id);
+      const idsToDelete = versionsToDelete.map(v => v.id);
 
       // Delete version history entries first (foreign key constraint)
       await supabase

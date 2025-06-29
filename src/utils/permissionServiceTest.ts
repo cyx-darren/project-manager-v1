@@ -30,7 +30,6 @@ export const testPermissionServiceFoundation = async () => {
     // Test 1: Basic permission check
     console.log('Testing basic permission check...')
     const basicResult = await permissionService.hasPermission(
-      testUserId, 
       'workspace.create'
     )
     results.basicPermissionCheck = typeof basicResult.hasPermission === 'boolean'
@@ -40,7 +39,6 @@ export const testPermissionServiceFoundation = async () => {
     console.log('Testing project permission check...')
     const projectContext: PermissionContext = { projectId: testProjectId }
     const projectResult = await permissionService.hasPermission(
-      testUserId,
       'project.view',
       projectContext
     )
@@ -51,7 +49,6 @@ export const testPermissionServiceFoundation = async () => {
     console.log('Testing workspace permission check...')
     const workspaceContext: PermissionContext = { workspaceId: testWorkspaceId }
     const workspaceResult = await permissionService.hasPermission(
-      testUserId,
       'workspace.view',
       workspaceContext
     )

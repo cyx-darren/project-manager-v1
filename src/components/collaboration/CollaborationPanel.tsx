@@ -26,14 +26,14 @@ const CollaborationPanel: React.FC<CollaborationPanelProps> = ({
     typingIndicators,
     currentUserPresence,
     setPresence,
-    removePresence,
+    removePresence: _removePresence,
     updateTyping,
     isLoading,
     error,
     getUsersCount,
     getActiveEditors,
     getActiveViewers,
-    isUserTyping
+    isUserTyping: _isUserTyping
   } = usePresence({
     entityType,
     entityId,
@@ -57,13 +57,13 @@ const CollaborationPanel: React.FC<CollaborationPanelProps> = ({
     handlePresenceChange('viewing');
   };
 
-  const handleStartTyping = (field: string) => {
+  const _handleStartTyping = (field: string) => {
     if (fieldName && field === fieldName) {
       updateTyping(field, true);
     }
   };
 
-  const handleStopTyping = (field: string) => {
+  const _handleStopTyping = (field: string) => {
     if (fieldName && field === fieldName) {
       updateTyping(field, false);
     }

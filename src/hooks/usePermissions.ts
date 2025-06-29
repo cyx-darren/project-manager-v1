@@ -357,10 +357,10 @@ export const usePermissionSummary = (projectId?: string) => {
 
       const context = projectId ? { projectId } : undefined
       const [canEdit, canDelete, canInvite, canManageTeam] = await Promise.all([
-        permissionService.hasPermission(user.id, 'project.edit', context),
-        permissionService.hasPermission(user.id, 'project.delete', context),
-        permissionService.hasPermission(user.id, 'team.invite', context),
-        permissionService.hasPermission(user.id, 'team.role.change', context)
+        permissionService.hasPermission('project.edit', context),
+        permissionService.hasPermission('project.delete', context),
+        permissionService.hasPermission('team.invite', context),
+        permissionService.hasPermission('team.role.change', context)
       ])
 
       setSummary({
@@ -445,7 +445,7 @@ export const useWorkspacePermissions = (workspaceId?: string) => {
     permissions,
     loading,
     hasPermission: (permission: Permission) => permissions.includes(permission),
-         canCreateProjects: permissions.includes('workspace.create_project'),
+    canCreateProjects: permissions.includes('workspace.create_projects'),
     canManageWorkspace: permissions.includes('workspace.edit'),
     canInviteUsers: permissions.includes('team.invite'),
     canManageUsers: permissions.includes('team.role.change')
@@ -495,7 +495,7 @@ export const usePreloadCommonPermissions = (projectId?: string) => {
       // Preload in parallel
       await Promise.all(
         commonPermissions.map(permission => 
-          permissionService.hasPermission(user.id, permission, context)
+          permissionService.hasPermission(permission, context)
         )
       )
     }
