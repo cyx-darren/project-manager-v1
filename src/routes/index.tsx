@@ -24,6 +24,7 @@ import { WorkspaceSettings } from '../pages/WorkspaceSettings';
 import { WorkspaceList } from '../pages/WorkspaceList';
 import { AdminUserManagement } from '../pages/AdminUserManagement';
 import { AdminRLSTesting } from '../pages/AdminRLSTesting';
+// import { ActivityDashboard } from '../components/activity/ActivityDashboard';
 
 
 // Main application routes
@@ -114,6 +115,16 @@ export const router = createBrowserRouter([
           </PermissionRoute>
         )
       },
+      // {
+      //   path: 'activity',
+      //   element: (
+      //     <ProtectedRoute>
+      //       <div className="p-6">
+      //         <ActivityDashboard />
+      //       </div>
+      //     </ProtectedRoute>
+      //   )
+      // },
       {
         path: 'projects/:projectId/*',
         element: (

@@ -49,6 +49,29 @@ interface DatabaseWorkspaceRoleResult {
 }
 
 class PermissionService {
+  // Circuit breaker to prevent infinite recursion
+  private static requestCount = 0
+  private static readonly MAX_REQUESTS = 10
+  private static lastResetTime = Date.now()
+  private static readonly RESET_INTERVAL = 5000 // 5 seconds
+
+  private checkCircuitBreaker(): boolean {
+    const now = Date.now()
+    
+    // Reset counter every 5 seconds
+    if (now - PermissionService.lastResetTime > PermissionService.RESET_INTERVAL) {
+      PermissionService.requestCount = 0
+      PermissionService.lastResetTime = now
+    }
+    
+    if (PermissionService.requestCount >= PermissionService.MAX_REQUESTS) {
+      console.error('🚨 Permission service circuit breaker triggered - too many requests, possible infinite loop')
+      return false
+    }
+    
+    PermissionService.requestCount++
+    return true
+  }
   private cache: PermissionCache = {}
   private readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
   private readonly DATABASE_AVAILABLE = false // Temporarily disable database functions until they're fixed
@@ -210,50 +233,55 @@ class PermissionService {
 
   /**
    * Get custom permissions for a user in a specific context
+   * TEMPORARILY DISABLED due to infinite recursion in RLS policies
    */
   async getCustomPermissions(userId: string, context?: PermissionContext): Promise<CustomPermission[]> {
-    try {
-      // Query custom_permissions table if available
-      // Use type assertion since custom_permissions table is not in current types
-      const query = (supabase as any)
-        .from('custom_permissions')
-        .select('*')
-        .eq('user_id', userId)
+    console.warn('🚨 Custom permissions temporarily disabled due to infinite recursion in RLS policies')
+    return [] // Return empty array to avoid queries that cause infinite recursion
+    
+    // COMMENTED OUT TO PREVENT INFINITE RECURSION:
+    // try {
+    //   // Query custom_permissions table if available
+    //   // Use type assertion since custom_permissions table is not in current types
+    //   const query = (supabase as any)
+    //     .from('custom_permissions')
+    //     .select('*')
+    //     .eq('user_id', userId)
 
-      // Add context filters if provided
-      if (context?.workspaceId) {
-        query.eq('workspace_id', context.workspaceId)
-      }
-      if (context?.projectId) {
-        query.eq('project_id', context.projectId)
-      }
-      if (context?.taskId) {
-        query.eq('task_id', context.taskId)
-      }
+    //   // Add context filters if provided
+    //   if (context?.workspaceId) {
+    //     query.eq('workspace_id', context.workspaceId)
+    //   }
+    //   if (context?.projectId) {
+    //     query.eq('project_id', context.projectId)
+    //   }
+    //   if (context?.taskId) {
+    //     query.eq('task_id', context.taskId)
+    //   }
 
-      const { data, error } = await query
+    //   const { data, error } = await query
 
-      if (error) {
-        console.error('Custom permissions table not available yet:', error)
-        return []
-      }
+    //   if (error) {
+    //     console.error('Custom permissions table not available yet:', error)
+    //     return []
+    //   }
 
-      return data?.map((row: any) => ({
-        userId: row.user_id,
-        permission: row.permission as Permission,
-        granted: row.granted,
-        context: {
-          workspaceId: row.workspace_id,
-          projectId: row.project_id,
-          taskId: row.task_id
-        },
-        grantedBy: row.granted_by,
-        grantedAt: new Date(row.granted_at)
-      })) || []
-    } catch (error) {
-      console.error('Error getting custom permissions:', error)
-      return []
-    }
+    //   return data?.map((row: any) => ({
+    //     userId: row.user_id,
+    //     permission: row.permission as Permission,
+    //     granted: row.granted,
+    //     context: {
+    //       workspaceId: row.workspace_id,
+    //       projectId: row.project_id,
+    //       taskId: row.task_id
+    //     },
+    //     grantedBy: row.granted_by,
+    //     grantedAt: new Date(row.granted_at)
+    //   })) || []
+    // } catch (error) {
+    //   console.error('Error getting custom permissions:', error)
+    //   return []
+    // }
   }
 
   /**
@@ -396,6 +424,15 @@ class PermissionService {
     permission: Permission,
     context?: PermissionContext
   ): Promise<PermissionResult> {
+    // Circuit breaker check to prevent infinite recursion
+    if (!this.checkCircuitBreaker()) {
+      console.warn('🚨 Permission check blocked by circuit breaker')
+      return {
+        hasPermission: false,
+        reason: 'Circuit breaker triggered - too many permission requests'
+      }
+    }
+
     try {
       // Generate cache key
       const cacheKey = `${userId}-${permission}-${JSON.stringify(context || {})}`
@@ -407,14 +444,18 @@ class PermissionService {
         return this.hasPermissionLocal(userId, permission, context)
       }
 
+      // TEMPORARILY use local permission check to avoid database recursion
       // Use database function for fresh permission check
-      return this.hasPermissionViaDatabase(userId, permission, context)
+      return this.hasPermissionLocal(userId, permission, context)
     } catch (error) {
       console.error('Error in hasPermission:', error)
       return {
         hasPermission: false,
         reason: `Permission check failed: ${error}`
       }
+    } finally {
+      // Decrement counter when done
+      PermissionService.requestCount--
     }
   }
 

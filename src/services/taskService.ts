@@ -1,6 +1,7 @@
 import { supabase, getCurrentUser } from '../config/supabase'
 import { handleTaskError, retryOperation } from '../utils/taskErrorHandler'
 import { permissionService } from './permissionService'
+import { collaborationService } from './collaborationService'
 import type { 
   Task, 
   TaskInsert, 
@@ -433,6 +434,24 @@ export const taskService = {
         throw new TaskError(error.message, error.code)
       }
 
+      // Log activity for task creation
+      try {
+        await collaborationService.logActivity({
+          user_id: user.id,
+          project_id: taskData.project_id,
+          entity_type: 'task',
+          entity_id: data.id,
+          action: 'created',
+          details: {
+            task_title: data.title,
+            assignee_id: data.assignee_id,
+            priority: data.priority
+          }
+        })
+      } catch (logError) {
+        console.warn('Failed to log task creation activity:', logError)
+      }
+
       return {
         data,
         error: null,
@@ -453,10 +472,15 @@ export const taskService = {
    */
   async updateTask(id: string, updates: TaskUpdate): Promise<ApiResponse<Task>> {
     try {
-      // First get the task to find its project for permission check
-      const { data: taskData, error: taskError } = await supabase
+      const user = await getCurrentUser()
+      if (!user) {
+        throw new TaskPermissionError('Must be authenticated to update tasks')
+      }
+
+      // First get the current task data for comparison and permission check
+      const { data: currentTask, error: taskError } = await supabase
         .from('tasks')
-        .select('project_id')
+        .select('*')
         .eq('id', id)
         .single()
 
@@ -468,7 +492,7 @@ export const taskService = {
       }
 
       // Check permission to edit tasks
-      await checkTaskPermission('task.edit', taskData.project_id, id)
+      await checkTaskPermission('task.edit', currentTask.project_id, id)
 
       const { data, error } = await supabase
         .from('tasks')
@@ -485,6 +509,78 @@ export const taskService = {
           throw new TaskError('Task not found', 'NOT_FOUND')
         }
         throw new TaskError(error.message, error.code)
+      }
+
+      // Log specific activities based on what was updated
+      try {
+        // Assignment change
+        if (updates.assignee_id !== undefined && updates.assignee_id !== currentTask.assignee_id) {
+          const action = updates.assignee_id ? 'assigned' : 'unassigned'
+          await collaborationService.logActivity({
+            user_id: user.id,
+            project_id: currentTask.project_id,
+            entity_type: 'task',
+            entity_id: id,
+            action,
+            details: {
+              task_title: data.title,
+              assigned_to: updates.assignee_id,
+              previous_assignee: currentTask.assignee_id
+            }
+          })
+        }
+
+        // Status change
+        if (updates.status && updates.status !== currentTask.status) {
+          const action = updates.status === 'done' ? 'completed' : 
+                        updates.status === 'in_progress' && currentTask.status === 'done' ? 'reopened' :
+                        'status_changed'
+          await collaborationService.logActivity({
+            user_id: user.id,
+            project_id: currentTask.project_id,
+            entity_type: 'task',
+            entity_id: id,
+            action,
+            details: {
+              task_title: data.title,
+              new_status: updates.status,
+              previous_status: currentTask.status
+            }
+          })
+        }
+
+        // Due date change
+        if (updates.due_date !== undefined && updates.due_date !== currentTask.due_date) {
+          await collaborationService.logActivity({
+            user_id: user.id,
+            project_id: currentTask.project_id,
+            entity_type: 'task',
+            entity_id: id,
+            action: 'due_date_changed',
+            details: {
+              task_title: data.title,
+              new_due_date: updates.due_date,
+              previous_due_date: currentTask.due_date
+            }
+          })
+        }
+
+        // General update if no specific actions were logged
+        if (!updates.assignee_id && !updates.status && !updates.due_date) {
+          await collaborationService.logActivity({
+            user_id: user.id,
+            project_id: currentTask.project_id,
+            entity_type: 'task',
+            entity_id: id,
+            action: 'updated',
+            details: {
+              task_title: data.title,
+              updated_fields: Object.keys(updates)
+            }
+          })
+        }
+      } catch (logError) {
+        console.warn('Failed to log task update activity:', logError)
       }
 
       return {
@@ -507,10 +603,15 @@ export const taskService = {
    */
   async deleteTask(id: string): Promise<ApiResponse<boolean>> {
     try {
-      // First get the task to find its project for permission check
+      const user = await getCurrentUser()
+      if (!user) {
+        throw new TaskPermissionError('Must be authenticated to delete tasks')
+      }
+
+      // First get the task data for activity logging and permission check
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
-        .select('project_id')
+        .select('project_id, title')
         .eq('id', id)
         .single()
 
@@ -541,6 +642,22 @@ export const taskService = {
           throw new TaskError('Task not found', 'NOT_FOUND')
         }
         throw new TaskError(error.message, error.code)
+      }
+
+      // Log activity for task deletion
+      try {
+        await collaborationService.logActivity({
+          user_id: user.id,
+          project_id: taskData.project_id,
+          entity_type: 'task',
+          entity_id: id,
+          action: 'deleted',
+          details: {
+            task_title: taskData.title
+          }
+        })
+      } catch (logError) {
+        console.warn('Failed to log task deletion activity:', logError)
       }
 
       return {

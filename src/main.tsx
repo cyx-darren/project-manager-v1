@@ -11,6 +11,9 @@ import { ProjectProvider } from './contexts/ProjectContext'
 import { SearchProvider } from './contexts/SearchContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { TaskProvider } from './contexts/TaskContext'
+import { CollaborativeNotificationsProvider } from './components/notifications/CollaborativeNotificationsProvider'
+// Import emergency fix utilities
+import './utils/emergencyFix'
 // Import initialization and health checks
 import './App'
 
@@ -40,9 +43,11 @@ root.render(
             <ProjectProvider>
               <SearchProvider>
                 <ToastProvider>
-                  <TaskProvider>
-                    <RouterProvider router={router} />
-                  </TaskProvider>
+                  <CollaborativeNotificationsProvider>
+                    <TaskProvider>
+                      <RouterProvider router={router} />
+                    </TaskProvider>
+                  </CollaborativeNotificationsProvider>
                 </ToastProvider>
               </SearchProvider>
             </ProjectProvider>

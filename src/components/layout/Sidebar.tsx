@@ -169,6 +169,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       description: 'Analytics and progress reports',
       keywords: ['reports', 'analytics', 'progress', 'metrics']
     },
+    // Temporarily disabled due to JSX compilation issues
+    // { 
+    //   name: 'Activity', 
+    //   icon: ClipboardDocumentListIcon, 
+    //   href: '/activity', 
+    //   shortName: 'Activity',
+    //   public: true,
+    //   category: 'work',
+    //   isNew: true,
+    //   description: 'User activity logs and analytics',
+    //   keywords: ['activity', 'logs', 'history', 'actions', 'timeline']
+    // },
 
     // Admin Navigation
     { 
