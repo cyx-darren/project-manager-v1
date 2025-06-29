@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import TaskModal from '../TaskModal'
 import { renderWithProviders } from '../../../test/setup'
@@ -62,13 +62,13 @@ vi.mock('../../../services/teamService', () => ({
 // Mock Supabase
 vi.mock('../../../services/supabase', () => ({
   supabase: {
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => Promise.resolve({ data: [], error: null }))
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => Promise.resolve({ data: [], error: null }))
       })),
-      insert: jest.fn(() => Promise.resolve({ data: [], error: null })),
-      update: jest.fn(() => Promise.resolve({ data: [], error: null })),
-      delete: jest.fn(() => Promise.resolve({ data: [], error: null }))
+      insert: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      update: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      delete: vi.fn(() => Promise.resolve({ data: [], error: null }))
     }))
   }
 }))
@@ -96,9 +96,10 @@ const mockTask: Task = {
 const defaultProps = {
   isOpen: true,
   onClose: vi.fn(),
-  onSuccess: vi.fn(),
+  onTaskCreated: vi.fn(),
   projectId: 'project-1',
-  teamMembers: []
+  task: null,
+  mode: 'edit' as const
 }
 
 const renderTaskModal = (props = {}) => {
@@ -109,12 +110,7 @@ const renderTaskModal = (props = {}) => {
           <ProjectProvider>
             <TaskProvider>
               <TaskModal
-                isOpen={true}
-                onClose={() => {}}
-                onSave={() => {}}
-                projectId="project-1"
-                task={mockTask}
-                mode="edit"
+                {...defaultProps}
                 {...props}
               />
             </TaskProvider>
@@ -156,7 +152,7 @@ describe('TaskModal', () => {
 
   describe('Task Edit Mode', () => {
     it('should render edit task form with pre-filled data', () => {
-      renderTaskModal()
+      renderTaskModal({ task: mockTask, mode: 'edit' })
 
       expect(screen.getByText('Edit Task')).toBeInTheDocument()
       expect(screen.getByDisplayValue('Test Task')).toBeInTheDocument()

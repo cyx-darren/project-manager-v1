@@ -24,7 +24,7 @@ const RoleDemo: React.FC = () => {
   const { 
     user, 
     hasRole, 
-    hasPermission 
+    hasPermission_legacy 
   } = useAuth()
   
   const { 
@@ -118,7 +118,7 @@ const RoleDemo: React.FC = () => {
                 <p>Is Admin: {hasRole('admin') ? '✅ Yes' : '❌ No'}</p>
                 <p>Is Member: {hasRole('member') ? '✅ Yes' : '❌ No'}</p>
                 <p>Is Guest: {hasRole('guest') ? '✅ Yes' : '❌ No'}</p>
-                <p>Has manage_users permission: {hasPermission('manage_users') ? '✅ Yes' : '❌ No'}</p>
+                <p>Has manage_users permission: {hasPermission_legacy('manage_users') ? '✅ Yes' : '❌ No'}</p>
               </div>
             </div>
           </div>

@@ -22,13 +22,13 @@ const AuthStateDemo: React.FC = () => {
     loading, 
     isAuthenticated, 
     hasRole, 
-    hasPermission, 
-    hasAnyPermission, 
-    hasAllPermissions,
+    hasPermission_legacy,
+    hasAnyPermission_legacy,
+    hasAllPermissions_legacy,
     refreshSession 
   } = useAuth()
   
-  const userRole = useRole()
+  const { role: userRole } = useRole()
   const canManageUsers = useAuthorization(['manage_users'])
   const authenticatedFetch = useAuthenticatedFetch()
   
@@ -37,22 +37,23 @@ const AuthStateDemo: React.FC = () => {
 
   const handleRefreshSession = async () => {
     setRefreshing(true)
-    const { error } = await refreshSession()
-    setRefreshing(false)
-    
-    if (error) {
-      setTestResult(`Session refresh failed: ${error.message}`)
-    } else {
-      setTestResult('Session refreshed successfully!')
+    try {
+      const result = await refreshSession()
+      if (result.error) {
+        setTestResult(`Session refresh failed: ${result.error.message}`)
+      } else {
+        setTestResult('Session refreshed successfully!')
+      }
+    } catch (error) {
+      setTestResult(`Session refresh error: ${error}`)
+    } finally {
+      setRefreshing(false)
     }
   }
 
   const testAuthenticatedFetch = async () => {
     try {
-      setTestResult('Testing authenticated fetch...')
-      
-      // This would normally be an actual API endpoint
-      const response = await authenticatedFetch('/api/test', {
+      const response = await authenticatedFetch('/api/protected-test', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -137,11 +138,11 @@ const AuthStateDemo: React.FC = () => {
               <div className="p-4 border rounded-lg">
                 <h3 className="font-medium mb-2">Permission Checks:</h3>
                 <div className="space-y-2">
-                  <p>Can Manage Users: {hasPermission('manage_users') ? '✅ Yes' : '❌ No'}</p>
-                  <p>Can View Reports: {hasPermission('view_reports') ? '✅ Yes' : '❌ No'}</p>
-                  <p>Can Delete Projects: {hasPermission('delete_projects') ? '✅ Yes' : '❌ No'}</p>
-                  <p>Has Any Permission: {hasAnyPermission(['manage_users', 'view_reports']) ? '✅ Yes' : '❌ No'}</p>
-                  <p>Has All Permissions: {hasAllPermissions(['manage_users', 'view_reports']) ? '✅ Yes' : '❌ No'}</p>
+                  <p>Can Manage Users: {hasPermission_legacy('manage_users') ? '✅ Yes' : '❌ No'}</p>
+                  <p>Can View Reports: {hasPermission_legacy('view_reports') ? '✅ Yes' : '❌ No'}</p>
+                  <p>Can Delete Projects: {hasPermission_legacy('delete_projects') ? '✅ Yes' : '❌ No'}</p>
+                  <p>Has Any Permission: {hasAnyPermission_legacy(['manage_users', 'view_reports']) ? '✅ Yes' : '❌ No'}</p>
+                  <p>Has All Permissions: {hasAllPermissions_legacy(['manage_users', 'view_reports']) ? '✅ Yes' : '❌ No'}</p>
                 </div>
               </div>
             </div>
@@ -242,7 +243,7 @@ const authenticatedFetch = useAuthenticatedFetch()
 userRole: "${userRole}"
 canManageUsers: ${canManageUsers}
 hasRole('admin'): ${hasRole('admin')}
-hasPermission('manage_users'): ${hasPermission('manage_users')}`}
+hasPermission('manage_users'): ${hasPermission_legacy('manage_users')}`}
               </pre>
             </div>
           </div>

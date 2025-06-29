@@ -7,7 +7,6 @@ import { Plus, MoreHorizontal, Edit2, Trash2, GripVertical } from 'lucide-react'
 import type { BoardColumn, Task } from '../../types/supabase'
 import { DraggableTask } from '../tasks/DraggableTask'
 import { BoardColumnService } from '../../services/boardColumnService'
-import { TaskCard } from '../tasks/TaskCard'
 
 interface CustomColumnProps {
   column: BoardColumn

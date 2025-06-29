@@ -1,17 +1,15 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { activityService } from '../../services/activityService'
 import type { ActivityStats, UserActivitySummary } from '../../services/activityService'
 import { ActivityFeed } from './ActivityFeed'
 import { getCurrentUser } from '../../config/supabase'
 import { 
-  Activity, 
-  TrendingUp, 
   Users, 
-  Clock, 
-  Calendar,
+  Calendar, 
+  TrendingUp, 
+  Activity,
   BarChart3,
-  Loader2,
-  ChevronRight
+  Loader2
 } from 'lucide-react'
 
 export const ActivityDashboard = () => {

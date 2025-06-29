@@ -282,7 +282,7 @@ export const WorkspaceMemberManagement: React.FC<WorkspaceMemberManagementProps>
                   onClick={() => handleRemoveMember(
                     member.id, 
                     member.user_id, 
-                    member.user?.full_name ?? member.user?.email ?? undefined
+                    (member.user?.full_name ?? member.user?.email) || undefined
                   )}
                   className="text-sm text-red-600 hover:text-red-800"
                   data-testid={`remove-member-${member.user_id}`}
