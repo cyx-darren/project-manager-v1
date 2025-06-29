@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import { useAuth, useRole, useAuthorization } from '../../contexts/AuthContext'
+import type { Permission } from '../../types/permissions'
 
 interface RoleGuardProps {
   children: ReactNode
   requiredRole?: 'admin' | 'member' | 'guest'
-  requiredPermissions?: string[]
+  requiredPermissions?: Permission[]
   requireAll?: boolean // Whether to require ALL permissions or ANY permission
   fallback?: ReactNode
 }
@@ -80,7 +81,7 @@ export const MemberOrAbove: React.FC<MemberOrAboveProps> = ({ children, fallback
 
 interface PermissionGuardProps {
   children: ReactNode
-  permissions: string[]
+  permissions: Permission[]
   requireAll?: boolean
   fallback?: ReactNode
 }
@@ -94,10 +95,9 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
   requireAll = true,
   fallback = null
 }) => {
-  const hasAccess = useAuthorization(requireAll ? permissions : [])
-  const { hasAnyPermission } = useAuth()
+  const { hasAllPermissions, hasAnyPermission } = useAuth()
   
-  const canAccess = requireAll ? hasAccess : hasAnyPermission(permissions)
+  const canAccess = requireAll ? hasAllPermissions(permissions) : hasAnyPermission(permissions)
   
   return canAccess ? <>{children}</> : <>{fallback}</>
 }
@@ -117,7 +117,7 @@ export const AccessDenied: React.FC<{ message?: string }> = ({
 
 // User role badge component
 export const UserRoleBadge: React.FC = () => {
-  const { role } = useRole()
+  const role = useRole()
   const { user } = useAuth()
   
   if (!user || !role) return null
@@ -129,7 +129,7 @@ export const UserRoleBadge: React.FC = () => {
   }
   
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${roleColors[role]}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${roleColors[role] || 'bg-gray-100 text-gray-800'}`}>
       {role.charAt(0).toUpperCase() + role.slice(1)}
     </span>
   )

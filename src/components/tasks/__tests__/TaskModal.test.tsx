@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event'
 import TaskModal from '../TaskModal'
 import { renderWithProviders } from '../../../test/setup'
 import type { Task } from '../../../types/supabase'
+import { BrowserRouter } from 'react-router-dom'
+import { AuthProvider } from '../../../contexts/AuthContext'
+import { ToastProvider } from '../../../contexts/ToastContext'
+import { ProjectProvider } from '../../../contexts/ProjectContext'
+import { TaskProvider } from '../../../contexts/TaskContext'
 
 // Mock all the contexts and services
 vi.mock('../../../contexts/AuthContext', () => ({
@@ -54,6 +59,20 @@ vi.mock('../../../services/teamService', () => ({
   }
 }))
 
+// Mock Supabase
+vi.mock('../../../services/supabase', () => ({
+  supabase: {
+    from: jest.fn(() => ({
+      select: jest.fn(() => ({
+        eq: jest.fn(() => Promise.resolve({ data: [], error: null }))
+      })),
+      insert: jest.fn(() => Promise.resolve({ data: [], error: null })),
+      update: jest.fn(() => Promise.resolve({ data: [], error: null })),
+      delete: jest.fn(() => Promise.resolve({ data: [], error: null }))
+    }))
+  }
+}))
+
 // Test data
 const mockTask: Task = {
   id: 'task-1',
@@ -70,7 +89,8 @@ const mockTask: Task = {
   estimated_hours: null,
   actual_hours: null,
   order_index: 0,
-  parent_task_id: null
+  parent_task_id: null,
+  column_id: null
 }
 
 const defaultProps = {
@@ -79,6 +99,30 @@ const defaultProps = {
   onSuccess: vi.fn(),
   projectId: 'project-1',
   teamMembers: []
+}
+
+const renderTaskModal = (props = {}) => {
+  return render(
+    <BrowserRouter>
+      <AuthProvider>
+        <ToastProvider>
+          <ProjectProvider>
+            <TaskProvider>
+              <TaskModal
+                isOpen={true}
+                onClose={() => {}}
+                onSave={() => {}}
+                projectId="project-1"
+                task={mockTask}
+                mode="edit"
+                {...props}
+              />
+            </TaskProvider>
+          </ProjectProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  )
 }
 
 describe('TaskModal', () => {
@@ -112,7 +156,7 @@ describe('TaskModal', () => {
 
   describe('Task Edit Mode', () => {
     it('should render edit task form with pre-filled data', () => {
-      renderWithProviders(<TaskModal {...defaultProps} task={mockTask} />)
+      renderTaskModal()
 
       expect(screen.getByText('Edit Task')).toBeInTheDocument()
       expect(screen.getByDisplayValue('Test Task')).toBeInTheDocument()
@@ -125,12 +169,17 @@ describe('TaskModal', () => {
       const user = userEvent.setup()
       const onClose = vi.fn()
       
-      renderWithProviders(<TaskModal {...defaultProps} onClose={onClose} />)
+      renderTaskModal({ onClose })
 
       const cancelButton = screen.getByRole('button', { name: /cancel/i })
       await user.click(cancelButton)
 
       expect(onClose).toHaveBeenCalled()
     })
+  })
+
+  it('renders in create mode without task data', () => {
+    renderTaskModal({ task: null, mode: 'create' })
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 }) 

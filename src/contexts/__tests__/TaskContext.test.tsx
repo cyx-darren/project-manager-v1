@@ -36,18 +36,20 @@ const mockTaskService = taskService as any
 const mockTask: Task = {
   id: 'task-1',
   title: 'Test Task',
-  description: 'Test description',
+  description: 'Test Description',
   status: 'todo',
   priority: 'medium',
   project_id: 'project-1',
   created_by: 'user-1',
-  created_at: '2024-01-01T00:00:00Z',
-  updated_at: '2024-01-01T00:00:00Z',
+  created_at: '2023-01-01T00:00:00Z',
+  updated_at: '2023-01-01T00:00:00Z',
   assignee_id: null,
   due_date: null,
   estimated_hours: null,
   actual_hours: null,
-  order_index: 0
+  order_index: 0,
+  parent_task_id: null,
+  column_id: null
 }
 
 const mockUpdatedTask: Task = {
@@ -125,7 +127,8 @@ describe('TaskContext', () => {
         description: 'New description',
         project_id: 'project-1',
         status: 'todo' as TaskStatus,
-        priority: 'medium' as const
+        priority: 'medium' as const,
+        created_by: 'user-1'
       }
 
       let createdTask: Task | null = null
@@ -150,7 +153,8 @@ describe('TaskContext', () => {
         description: 'New description',
         project_id: 'project-1',
         status: 'todo' as TaskStatus,
-        priority: 'medium' as const
+        priority: 'medium' as const,
+        created_by: 'user-1'
       }
 
       let createdTask: Task | null = null

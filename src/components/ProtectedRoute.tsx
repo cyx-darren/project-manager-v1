@@ -1,13 +1,14 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import type { Permission } from '../types/permissions';
 import LoadingSpinner from './LoadingSpinner';
 
 interface ProtectedRouteProps {
   children?: React.ReactNode;
   redirectTo?: string;
   requiredRole?: 'admin' | 'member' | 'guest';
-  requiredPermissions?: string[];
+  requiredPermissions?: Permission[];
   requireAll?: boolean; // Whether to require ALL permissions or ANY permission
   fallbackComponent?: React.ComponentType;
 }
