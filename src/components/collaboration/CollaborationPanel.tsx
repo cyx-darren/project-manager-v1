@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { usePresence } from '../../hooks/usePresence';
 import UserPresenceIndicator from './UserPresenceIndicator';
 import TypingIndicator from './TypingIndicator';
-import type { EntityPresence } from '../../services/presenceService';
+// import type { EntityPresence } from '../../services/presenceService'; // Unused
 
 interface CollaborationPanelProps {
   entityType: 'task' | 'project' | 'comment';

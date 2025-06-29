@@ -24,7 +24,7 @@ type WorkspaceUpdateData = z.infer<typeof workspaceUpdateSchema>
 export const WorkspaceSettings: React.FC = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user: _user } = useAuth() // Unused but kept for future use
   const { showToast } = useToast()
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
@@ -39,7 +39,7 @@ export const WorkspaceSettings: React.FC = () => {
     handleSubmit,
     formState: { errors, isDirty },
     reset,
-    watch
+    watch: _watch
   } = useZodForm(workspaceUpdateSchema)
 
   useEffect(() => {
@@ -78,7 +78,7 @@ export const WorkspaceSettings: React.FC = () => {
         name: workspaceData.name,
         description: workspaceData.description || '',
         logo_url: workspaceData.logo_url || '',
-        settings: workspaceData.settings || {
+        settings: (workspaceData.settings as any) || {
           allow_public_projects: false,
           require_invitation: true,
           default_project_visibility: 'workspace'
@@ -369,7 +369,7 @@ export const WorkspaceSettings: React.FC = () => {
               <div>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Created</h4>
                 <p className="text-sm text-gray-600">
-                  {new Date(workspace.created_at).toLocaleDateString()}
+                  {workspace.created_at ? new Date(workspace.created_at).toLocaleDateString() : 'Unknown'}
                 </p>
               </div>
 

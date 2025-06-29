@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { projectService, taskService, testSupabaseConnection, collaborationService } from '../../services'
+import { projectService, taskService, testSupabaseConnection } from '../../services'
 import type { Project, Task } from '../../types/supabase'
 import { runCollaborationTests, testCollaborationFeatures } from '../../utils/collaborationTest'
 import { RealtimeDemo } from '../realtime/RealtimeDemo'

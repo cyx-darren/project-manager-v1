@@ -22,7 +22,7 @@ export const WorkspaceMemberManagement: React.FC<WorkspaceMemberManagementProps>
   const [showInviteForm, setShowInviteForm] = useState(false)
   
   const { showToast } = useToast()
-  const { hasPermission } = usePermissions()
+  const { hasPermission: _hasPermission } = usePermissions() // Unused but kept for future use
   const { user } = useAuth()
 
   const canInviteMembers = userRole === 'owner' || userRole === 'admin'
@@ -73,7 +73,7 @@ export const WorkspaceMemberManagement: React.FC<WorkspaceMemberManagementProps>
     }
   }
 
-  const handleRoleChange = async (memberId: string, userId: string, newRole: WorkspaceRole) => {
+  const handleRoleChange = async (_memberId: string, userId: string, newRole: WorkspaceRole) => {
     try {
       await workspaceService.updateMemberRole(workspaceId, userId, newRole)
       showToast('success', 'Member role updated successfully')
@@ -84,7 +84,7 @@ export const WorkspaceMemberManagement: React.FC<WorkspaceMemberManagementProps>
     }
   }
 
-  const handleRemoveMember = async (memberId: string, userId: string, memberName?: string) => {
+  const handleRemoveMember = async (_memberId: string, userId: string, memberName?: string) => {
     if (!confirm(`Are you sure you want to remove ${memberName || 'this member'} from the workspace?`)) {
       return
     }
@@ -228,7 +228,7 @@ export const WorkspaceMemberManagement: React.FC<WorkspaceMemberManagementProps>
                 {member.user?.avatar_url ? (
                   <img
                     src={member.user.avatar_url}
-                    alt={member.user.full_name || member.user.email}
+                    alt={member.user.full_name || member.user.email || undefined}
                     className="h-10 w-10 rounded-full"
                   />
                 ) : (

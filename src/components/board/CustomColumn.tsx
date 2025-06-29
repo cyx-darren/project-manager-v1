@@ -36,10 +36,10 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
   onColumnUpdated,
   onColumnDeleted,
   activeTaskId,
-  overId,
+  overId: _overId,
   canEditTasks,
   canManageColumns,
-  isLoading = false
+  isLoading: _isLoading = false
 }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(column.name)
@@ -106,7 +106,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
 
   // Close menu on outside click
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (_event: MouseEvent) => {
       if (showMenu) {
         setShowMenu(false)
       }
@@ -124,7 +124,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
     setShowMenu(false)
   }
 
-  const handleEditSave = async () => {
+  const _handleEditSave = async () => {
     const trimmedValue = editValue.trim()
     if (trimmedValue && trimmedValue !== column.name) {
       try {
@@ -145,7 +145,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
     setIsEditing(false)
   }
 
-  const handleEditCancel = () => {
+  const _handleEditCancel = () => {
     setEditValue(column.name)
     setIsEditing(false)
   }
@@ -274,7 +274,7 @@ export const CustomColumn: React.FC<CustomColumnProps> = ({
             )}
             
             {/* Tasks with enhanced visual feedback */}
-            {sortedTasks.map((task, index) => (
+            {sortedTasks.map((task, _index) => (
               <DraggableTask
                 key={task.id}
                 task={task}

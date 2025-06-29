@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from 'react'
-import { Clock, FileText, Folder, Calendar, ArrowRight } from 'lucide-react'
+import { FileText, Folder, Calendar, ArrowRight } from 'lucide-react'
 import type { SearchResult } from '../../contexts/SearchContext'
 
 interface SearchResultsProps {

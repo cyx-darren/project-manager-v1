@@ -1,20 +1,15 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
-  Share2, 
-  FileText, 
-  Users, 
-  BarChart3, 
-  Settings,
-  Folder,
-  Paperclip,
+  Download,
+  Upload,
+  FileText,
+  Users,
+  ChevronDown,
+  Search,
+  Filter,
+  MoreHorizontal,
   Eye,
-  Edit3,
-  MessageSquare,
-  Globe,
-  Lock,
-  Calendar,
-  Copy,
-  TrendingUp
+  Share2
 } from 'lucide-react'
 import { ShareButton } from './ShareButton'
 import { ShareModal } from './ShareModal'
@@ -128,7 +123,7 @@ export const DocumentSharingDemo: React.FC = () => {
           data-testid="projects-tab"
         >
           <div className="flex items-center justify-center gap-2">
-            <Folder className="w-4 h-4" />
+            <FileText className="w-4 h-4" />
             Projects
           </div>
         </button>
@@ -142,7 +137,7 @@ export const DocumentSharingDemo: React.FC = () => {
           data-testid="analytics-tab"
         >
           <div className="flex items-center justify-center gap-2">
-            <BarChart3 className="w-4 h-4" />
+            <FileText className="w-4 h-4" />
             Analytics
           </div>
         </button>
@@ -190,7 +185,7 @@ export const DocumentSharingDemo: React.FC = () => {
               {/* Link Sharing */}
               <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <Globe className="w-8 h-8 text-green-600" />
+                  <FileText className="w-8 h-8 text-green-600" />
                   <h4 className="text-lg font-semibold text-green-900">Link Sharing</h4>
                 </div>
                 <ul className="space-y-2 text-sm text-green-800">
@@ -212,7 +207,7 @@ export const DocumentSharingDemo: React.FC = () => {
               {/* Analytics */}
               <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <TrendingUp className="w-8 h-8 text-purple-600" />
+                  <FileText className="w-8 h-8 text-purple-600" />
                   <h4 className="text-lg font-semibold text-purple-900">Analytics</h4>
                 </div>
                 <ul className="space-y-2 text-sm text-purple-800">
@@ -386,7 +381,7 @@ export const DocumentSharingDemo: React.FC = () => {
         {activeTab === 'analytics' && (
           <div className="space-y-6" data-testid="analytics-content">
             <div className="text-center">
-              <BarChart3 className="w-12 h-12 text-violet-600 mx-auto mb-4" />
+              <FileText className="w-12 h-12 text-violet-600 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Sharing Analytics Demo
               </h3>

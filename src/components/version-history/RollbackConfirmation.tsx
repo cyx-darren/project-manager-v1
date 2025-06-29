@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { AlertTriangle, RotateCcw, X } from 'lucide-react';
 
 interface RollbackConfirmationProps {

@@ -36,7 +36,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     }
   };
 
-  const handleRoleUpdate = async (roleId: string, newRole: string, contextType: 'workspace' | 'project', contextId: string) => {
+  const handleRoleUpdate = async (_roleId: string, newRole: string, contextType: 'workspace' | 'project', contextId: string) => {
     try {
       await adminService.updateUserRole(user.id, newRole, contextType, contextId);
       loadUserRoles();

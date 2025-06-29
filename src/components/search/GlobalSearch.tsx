@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, X, Command } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useSearch } from '../../contexts/SearchContext'
 import { useAuth } from '../../contexts/AuthContext'

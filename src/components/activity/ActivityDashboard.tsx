@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { activityService } from '../../services/activityService'
 import type { ActivityStats, UserActivitySummary } from '../../services/activityService'
 import { ActivityFeed } from './ActivityFeed'

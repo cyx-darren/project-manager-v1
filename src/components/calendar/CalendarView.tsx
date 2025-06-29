@@ -7,13 +7,11 @@ import {
   useSensors,
   useSensor,
   PointerSensor,
-  rectIntersection,
-  getFirstCollision,
   pointerWithin,
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { Plus, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Filter } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Filter } from 'lucide-react'
 import type { Project, Task } from '../../types/supabase'
 import "./calendar-responsive.css";
 import { getTaskStatusCounts } from "../../utils/calendarUtils";
@@ -639,7 +637,7 @@ const CalendarMonth: React.FC<{
 }
 
 const CalendarView: React.FC<CalendarViewProps> = ({
-  project,
+  project: _project,
   tasks,
   onTaskClick,
   onDateClick
@@ -1199,6 +1197,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({
     setTimeout(() => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
     }, 100)
+  }
+
+  // Unused collision detection function - kept for future use
+  const _singleResultCollisionDetection = () => {
+    // Implementation would go here
   }
 
   // Mobile view

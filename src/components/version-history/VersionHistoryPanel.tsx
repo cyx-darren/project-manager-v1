@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Clock, RotateCcw, GitBranch, Eye, User, Calendar, FileText, AlertCircle } from 'lucide-react';
 import { useVersionHistory, type UseVersionHistoryProps } from '../../hooks/useVersionHistory';
 import { VersionComparison } from './VersionComparison';

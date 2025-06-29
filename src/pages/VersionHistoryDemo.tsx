@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, FileText, History, Database, AlertCircle, CheckCircle } from 'lucide-react';
 import { VersionHistoryPanel } from '../components/version-history/VersionHistoryPanel';
 import { versionHistoryService } from '../services/versionHistoryService';

@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react'; // Not needed in React 17+
 import { X, Plus, Minus, Edit3 } from 'lucide-react';
 import type { VersionComparison as VersionComparisonType } from '../../services/versionHistoryService';
 

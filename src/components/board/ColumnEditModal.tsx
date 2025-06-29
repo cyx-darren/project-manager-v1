@@ -37,7 +37,7 @@ export const ColumnEditModal: React.FC<ColumnEditModalProps> = ({
   onClose,
   onColumnUpdated,
   onColumnDeleted,
-  isLoading = false
+  isLoading: _isLoading = false
 }) => {
   const [name, setName] = useState(column.name)
   const [color, setColor] = useState(column.color)
