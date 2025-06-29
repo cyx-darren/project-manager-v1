@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Plus, Folder, AlertCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import ProjectCard from './ProjectCard'
 import ProjectFiltersComponent, { type ProjectFilters } from './ProjectFilters'
 import CreateProjectModal from './CreateProjectModal'
@@ -10,6 +11,7 @@ import { projectService } from '../../services'
 import type { ProjectWithMembers } from '../../types/supabase'
 
 const ProjectList: React.FC = () => {
+  const navigate = useNavigate()
   const [projects, setProjects] = useState<ProjectWithMembers[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -211,13 +213,33 @@ const ProjectList: React.FC = () => {
               </p>
             </div>
             
-            <PermissionGuard requiredPermission="workspace.create_projects">
+            {/* Create New Project Button - Always show with different styles based on permission */}
+            <PermissionGuard 
+              requiredPermission="workspace.create_projects"
+              hideOnNoPermission={true}
+            >
               <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                onClick={() => navigate('/projects/new')}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
               >
                 <Plus size={16} />
-                New Project
+                Create New Project
+              </button>
+            </PermissionGuard>
+            
+            {/* Fallback button for users without full permissions */}
+            <PermissionGuard 
+              requiredPermission="workspace.create_projects"
+              invertLogic={true}
+              hideOnNoPermission={false}
+            >
+              <button
+                onClick={() => navigate('/projects/new')}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                title="You have limited permissions - contact admin for full access"
+              >
+                <Plus size={16} />
+                Create New Project
               </button>
             </PermissionGuard>
           </div>
@@ -248,8 +270,8 @@ const ProjectList: React.FC = () => {
             {projects.length === 0 && (
               <PermissionGuard requiredPermission="workspace.create_projects">
                 <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="flex items-center gap-2 mx-auto px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  onClick={() => navigate('/projects/new')}
+                  className="flex items-center gap-2 mx-auto px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
                 >
                   <Plus size={16} />
                   Create Your First Project
