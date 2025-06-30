@@ -106,23 +106,16 @@ export const VirtualizedColumn: React.FC<VirtualizedColumnProps> = ({
     }
   })
 
-  const getColumnColor = useCallback((status: TaskStatus, isDraggingOver: boolean) => {
-    const baseColors = {
-      todo: isDraggingOver 
-        ? 'border-blue-400 bg-blue-100 shadow-lg shadow-blue-200/50' 
-        : 'border-gray-300 bg-gray-50',
-      in_progress: isDraggingOver 
-        ? 'border-blue-400 bg-blue-100 shadow-lg shadow-blue-200/50' 
-        : 'border-yellow-300 bg-yellow-50',
-      done: isDraggingOver 
-        ? 'border-blue-400 bg-blue-100 shadow-lg shadow-blue-200/50' 
-        : 'border-green-300 bg-green-50'
-    }
-    
-    return baseColors[status] || baseColors.todo
-  }, [])
+  // Status color mapping with proper type safety
+  const statusColors: Record<TaskStatus, string> = {
+    'todo': 'bg-gray-100 border-gray-300',
+    'in_progress': 'bg-blue-100 border-blue-300',
+    'done': 'bg-green-100 border-green-300'
+  }
 
-  const getColumnHeaderColor = useCallback((status: TaskStatus, isDraggingOver: boolean) => {
+  const borderColor = statusColors[id] || 'bg-gray-100 border-gray-300'
+
+  const getColumnHeaderColor = (status: TaskStatus, isDraggingOver: boolean) => {
     if (isDraggingOver) {
       return 'text-blue-700 bg-blue-200'
     }
@@ -137,7 +130,7 @@ export const VirtualizedColumn: React.FC<VirtualizedColumnProps> = ({
       default:
         return 'text-gray-700 bg-gray-100'
     }
-  }, [])
+  }
 
   // Memoize the item data to prevent unnecessary re-renders
   const itemData = useMemo(() => ({
@@ -161,7 +154,7 @@ export const VirtualizedColumn: React.FC<VirtualizedColumnProps> = ({
       ref={setNodeRef}
       className={`
         flex flex-col h-full min-h-[500px] rounded-lg border-2 transition-all duration-200 ease-in-out
-        ${getColumnColor(id, isOver)}
+        ${borderColor}
         ${isOver ? 'transform scale-105' : 'transform scale-100'}
       `}
     >

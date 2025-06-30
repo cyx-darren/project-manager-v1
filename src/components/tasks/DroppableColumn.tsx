@@ -46,21 +46,14 @@ export const DroppableColumn: React.FC<DroppableColumnProps> = ({
     }
   })
 
-  const getColumnColor = (status: TaskStatus, isDraggingOver: boolean) => {
-    const baseColors = {
-      todo: isDraggingOver 
-        ? 'border-blue-400 bg-blue-100 shadow-lg shadow-blue-200/50' 
-        : 'border-gray-300 bg-gray-50',
-      in_progress: isDraggingOver 
-        ? 'border-blue-400 bg-blue-100 shadow-lg shadow-blue-200/50' 
-        : 'border-yellow-300 bg-yellow-50',
-      done: isDraggingOver 
-        ? 'border-blue-400 bg-blue-100 shadow-lg shadow-blue-200/50' 
-        : 'border-green-300 bg-green-50'
-    }
-    
-    return baseColors[status] || baseColors.todo
+  // Status color mapping with proper type safety
+  const statusColors: Record<TaskStatus, string> = {
+    'todo': 'bg-gray-100 border-gray-300',
+    'in_progress': 'bg-blue-100 border-blue-300',
+    'done': 'bg-green-100 border-green-300'
   }
+
+  const borderColor = statusColors[id as TaskStatus] || 'bg-gray-100 border-gray-300'
 
   const getColumnHeaderColor = (status: TaskStatus, isDraggingOver: boolean) => {
     if (isDraggingOver) {
@@ -84,11 +77,8 @@ export const DroppableColumn: React.FC<DroppableColumnProps> = ({
       ref={setNodeRef}
       className={`
         flex flex-col h-full min-h-[500px] rounded-lg border-2 transition-all duration-300 ease-out
-        ${getColumnColor(id, isOver)}
-        ${isOver 
-          ? 'transform scale-[1.02] -translate-y-1 shadow-xl' 
-          : 'transform scale-100 translate-y-0'
-        }
+        ${borderColor}
+        ${isOver ? 'border-blue-500 bg-blue-50' : ''}
       `}
     >
       {/* Column Header */}
@@ -168,10 +158,7 @@ export const DroppableColumn: React.FC<DroppableColumnProps> = ({
           {tasks.length === 0 && (
             <div className={`
               flex items-center justify-center h-32 text-sm rounded-lg border-2 border-dashed transition-all duration-300 ease-out
-              ${isOver 
-                ? 'border-blue-400 bg-blue-50 text-blue-600 animate-bounce scale-105' 
-                : 'border-gray-300 text-gray-500 hover:border-gray-400 hover:bg-gray-50'
-              }
+              ${isOver ? 'border-blue-400 bg-blue-50 text-blue-600 animate-bounce scale-105' : 'border-gray-300 text-gray-500 hover:border-gray-400 hover:bg-gray-50'}
             `}>
               {isOver ? 'Release to drop task here' : 'Drop tasks here'}
             </div>

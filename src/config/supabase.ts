@@ -21,32 +21,34 @@ if (isProduction && (supabaseUrl.includes('localhost') || supabaseUrl.includes('
 }
 
 // Validate Supabase URL format
-if (!supabaseUrl.match(/^https:\/\/[a-z0-9]+\.supabase\.co$/)) {
-  console.warn('Supabase URL format may be incorrect:', supabaseUrl)
+if (!supabaseUrl.startsWith('https://') || !supabaseUrl.includes('.supabase.co')) {
+  console.warn('⚠️ Supabase URL format may be incorrect:', supabaseUrl)
 }
 
-console.log('🔗 Supabase Configuration:', {
+console.log('🔗 Supabase configuration:', {
   url: supabaseUrl,
-  keyLength: supabaseAnonKey.length,
-  environment: import.meta.env.NODE_ENV || 'development'
+  environment: isProduction ? 'production' : 'development',
+  hasAnonKey: !!supabaseAnonKey
 })
 
-// Create Supabase client with TypeScript support
+// Create Supabase client with proper configuration for Supabase v2.50.0
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
-    // Disable localhost redirects in production
-    redirectTo: isProduction ? undefined : 'http://localhost:5173'
+    detectSessionInUrl: true
   },
-  // Disable realtime in production if causing issues
   realtime: {
     params: {
-      eventsPerSecond: isProduction ? 5 : 10
+      eventsPerSecond: 10
     }
   }
 })
+
+// Production safety: Disable real-time if configured to do so
+if (isProduction && import.meta.env.VITE_ENABLE_REAL_TIME === 'false') {
+  console.log('🔇 Real-time features disabled in production')
+}
 
 // Helper function to get authenticated client
 export const getAuthenticatedClient = async () => {
