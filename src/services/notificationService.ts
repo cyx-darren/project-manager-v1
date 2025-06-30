@@ -242,25 +242,14 @@ class NotificationService {
 
       // Check if user is assigned to the task
       if (activity.entity_type === 'task') {
-        const { data: assignment } = await supabase
-          .from('task_assignments')
-          .select('id')
-          .eq('task_id', activity.entity_id)
-          .eq('user_id', userId)
-          .maybeSingle()
-
-        if (assignment) {
-          return true
-        }
-
-        // Check if user is the task creator
+        // Check if user is the task assignee
         const { data: task } = await supabase
           .from('tasks')
-          .select('created_by')
+          .select('assignee_id, created_by')
           .eq('id', activity.entity_id)
           .single()
 
-        if (task?.created_by === userId) {
+        if (task?.assignee_id === userId || task?.created_by === userId) {
           return true
         }
       }
@@ -391,7 +380,7 @@ class NotificationService {
           schema: 'public',
           table: 'activity_logs'
         },
-        async (payload) => {
+        async (payload: { new: ActivityLog }) => {
           const activity = payload.new as ActivityLog
           await this.processActivity(activity, onNotification)
         }

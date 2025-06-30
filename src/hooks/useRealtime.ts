@@ -292,7 +292,7 @@ export function useGlobalRealtime() {
 
   const send = useCallback(async (payload: any): Promise<RealtimeChannelSendResponse> => {
     if (!channelRef.current || !REALTIME_ENABLED) {
-      return { status: 'error', response: 'Channel not available or disabled' };
+      return { status: 'error', response: 'Channel not available or disabled' } as unknown as RealtimeChannelSendResponse;
     }
 
     return channelRef.current.send({
@@ -446,7 +446,7 @@ export function useProjectRealtimeSupabase(projectId: string | null) {
 
   const send = useCallback(async (payload: any): Promise<RealtimeChannelSendResponse> => {
     if (!channelRef.current || !REALTIME_ENABLED) {
-      return { status: 'error', response: 'Channel not available or disabled' };
+      return { status: 'error', response: 'Channel not available or disabled' } as unknown as RealtimeChannelSendResponse;
     }
 
     return channelRef.current.send({

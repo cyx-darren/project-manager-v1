@@ -4,29 +4,34 @@ import { RealtimeChannel, type RealtimePostgresChangesPayload, REALTIME_LISTEN_T
 // Types for real-time events
 export interface RealtimeTaskEvent {
   type: 'INSERT' | 'UPDATE' | 'DELETE';
-  table: 'tasks';
+  table: string;
   record: any;
   old_record?: any;
+  timestamp?: Date;
 }
 
 export interface RealtimeCommentEvent {
   type: 'INSERT' | 'UPDATE' | 'DELETE';
-  table: 'comments';
+  table: string;
   record: any;
   old_record?: any;
+  timestamp?: Date;
 }
 
 export interface RealtimeProjectEvent {
   type: 'INSERT' | 'UPDATE' | 'DELETE';
-  table: 'projects' | 'project_members';
+  table: string;
   record: any;
   old_record?: any;
+  timestamp?: Date;
 }
 
 export interface RealtimeActivityEvent {
-  type: 'INSERT';
-  table: 'activity_logs';
+  type: 'INSERT' | 'UPDATE' | 'DELETE';
+  table: string;
   record: any;
+  old_record?: any;
+  timestamp?: Date;
 }
 
 export type RealtimeEvent = RealtimeTaskEvent | RealtimeCommentEvent | RealtimeProjectEvent | RealtimeActivityEvent;
